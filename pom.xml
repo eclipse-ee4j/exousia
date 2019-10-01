@@ -21,7 +21,7 @@
     
     <groupId>org.omnifaces</groupId>
     <artifactId>exousia</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1</version>
     
     <name>Exousia</name>
     <description>
@@ -136,6 +136,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
+                    <source>1.7</source>
                     <javadocVersion>${javadoc.version}</javadocVersion>
                     <notimestamp>true</notimestamp>
                     <splitindex>true</splitindex>
