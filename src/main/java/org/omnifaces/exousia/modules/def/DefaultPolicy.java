@@ -32,6 +32,8 @@ import javax.security.auth.Subject;
 import javax.security.jacc.PolicyContext;
 import javax.security.jacc.PolicyContextException;
 
+import org.omnifaces.exousia.spi.PrincipalMapper;
+
 /**
  * 
  * @author Arjan Tijms
@@ -44,7 +46,7 @@ public class DefaultPolicy extends Policy {
     public boolean implies(ProtectionDomain domain, Permission permission) {
 
         DefaultPolicyConfiguration policyConfiguration = getCurrentPolicyConfiguration();
-        DefaultRoleMapper roleMapper = policyConfiguration.getRoleMapper();
+        PrincipalMapper roleMapper = policyConfiguration.getRoleMapper();
 
         if (isExcluded(policyConfiguration.getExcludedPermissions(), permission)) {
             // Excluded permissions cannot be accessed by anyone
@@ -99,7 +101,7 @@ public class DefaultPolicy extends Policy {
         Permissions permissions = new Permissions();
 
         DefaultPolicyConfiguration policyConfiguration = getCurrentPolicyConfiguration();
-        DefaultRoleMapper roleMapper = policyConfiguration.getRoleMapper();
+        PrincipalMapper roleMapper = policyConfiguration.getRoleMapper();
 
         Permissions excludedPermissions = policyConfiguration.getExcludedPermissions();
 

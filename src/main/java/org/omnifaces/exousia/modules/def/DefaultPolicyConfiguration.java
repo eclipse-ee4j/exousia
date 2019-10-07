@@ -14,7 +14,13 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
 package org.omnifaces.exousia.modules.def;
+import static org.omnifaces.exousia.AuthorizationService.PRINCIPAL_MAPPER;
+
+import javax.security.jacc.PolicyContext;
 import javax.security.jacc.PolicyContextException;
+
+import org.omnifaces.exousia.spi.PrincipalMapper;
+import org.omnifaces.exousia.spi.impl.DefaultRoleMapper;
 
 /**
  * 
@@ -26,14 +32,18 @@ public class DefaultPolicyConfiguration extends DefaultPolicyConfigurationPermis
         super(contextID);
     }
      
-    private DefaultRoleMapper roleMapper;
+    private PrincipalMapper roleMapper;
  
     @Override
     public void commit() throws PolicyContextException {
-        roleMapper = new DefaultRoleMapper(getContextID(), getPerRolePermissions().keySet());
+        
+        roleMapper =  (PrincipalMapper) PolicyContext.getContext(PRINCIPAL_MAPPER);
+        if (roleMapper == null) {
+            roleMapper = new DefaultRoleMapper(getContextID(), getPerRolePermissions().keySet());
+        }
     }
      
-    public DefaultRoleMapper getRoleMapper() {
+    public PrincipalMapper getRoleMapper() {
         return roleMapper;
     }
  

@@ -30,8 +30,11 @@ import javax.security.jacc.PolicyConfiguration;
 import javax.security.jacc.PolicyConfigurationFactory;
 import javax.security.jacc.PolicyContext;
 import javax.security.jacc.PolicyContextException;
+import javax.security.jacc.WebResourcePermission;
 import javax.security.jacc.WebUserDataPermission;
 import javax.servlet.http.HttpServletRequest;
+
+import org.omnifaces.exousia.spi.PrincipalMapper;
 
 /**
  * 
@@ -43,6 +46,8 @@ public class AuthorizationService {
     public static final String SUBJECT = "javax.security.auth.Subject.container";
     
     public static final String FACTORY = "javax.security.jacc.PolicyConfigurationFactory.provider";
+    
+    public static final String PRINCIPAL_MAPPER = "jakarta.authorization.PrincipalMapper.provider";
 
     /**
      * The authorization policy. This is the class that makes the actual decision for a permission
@@ -62,6 +67,13 @@ public class AuthorizationService {
             Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
             Supplier<HttpServletRequest> requestSupplier,
             Supplier<Subject> subjectSupplier) {
+        this(factoryClass, policyClass, contextId, requestSupplier, subjectSupplier, null);
+    }
+    
+    public AuthorizationService(
+            Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
+            Supplier<HttpServletRequest> requestSupplier,
+            Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
         try {
         
             // Install the authorization factory
@@ -87,6 +99,11 @@ public class AuthorizationService {
                 SUBJECT, 
                 new DefaultPolicyContextHandler(SUBJECT, subjectSupplier), 
                 true);
+            
+            PolicyContext.registerHandler(
+                PRINCIPAL_MAPPER, 
+                new DefaultPolicyContextHandler(PRINCIPAL_MAPPER, () -> principalMapper),
+                true);
         
         } catch (IllegalAccessException | InstantiationException | PolicyContextException | ClassNotFoundException e) {
             throw new IllegalStateException(e);
@@ -102,7 +119,19 @@ public class AuthorizationService {
     }
 
     public boolean checkPublicWebResourcePermission(HttpServletRequest request) {
-        return checkPermission(new WebUserDataPermission(getConstrainedURI(request), request.getMethod()));
+        return checkPermission(new WebResourcePermission(getConstrainedURI(request), request.getMethod()));
+    }
+    
+    public boolean checkWebResourcePermission(HttpServletRequest request) {
+        try {
+            Subject subject = (Subject) PolicyContext.getContext(SUBJECT);
+        
+            return checkPermission(
+                    new WebResourcePermission(
+                        getConstrainedURI(request), request.getMethod()), subject.getPrincipals());
+        } catch (PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     boolean checkPermission(Permission permissionToBeChecked) {

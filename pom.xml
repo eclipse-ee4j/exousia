@@ -16,24 +16,30 @@
     SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <groupId>org.omnifaces</groupId>
     <artifactId>exousia</artifactId>
     <version>0.1</version>
-    
+
     <name>Exousia</name>
     <description>
     	Exousia is an implementation of the Jakarta Authorization API.
     </description>
     <url>http://omnifaces.org</url>
-    
+    <inceptionYear>2019</inceptionYear>
     <organization>
         <name>OmniFaces</name>
         <url>http://omnifaces.org</url>
     </organization>
-    <inceptionYear>2019</inceptionYear>
+    <licenses>
+        <license>
+            <name>EPL 2.0</name>
+            <url>http://www.eclipse.org/legal/epl-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <developers>
         <developer>
@@ -43,27 +49,18 @@
         </developer>
     </developers>
 
-    <licenses>
-        <license>
-            <name>EPL 2.0</name>
-            <url>http://www.eclipse.org/legal/epl-2.0</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-    
     <scm>
         <url>https://github.com/omnifaces/Exousia</url>
         <connection>scm:git:git://github.com/omnifaces/Exousia.git</connection>
         <developerConnection>scm:git:git@github.com:omnifaces/Exousia.git</developerConnection>
     </scm>
-
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
-    
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -71,7 +68,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-    
+
     <dependencies>
         <dependency>
             <groupId>jakarta.servlet</groupId>
@@ -136,7 +133,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
-                    <source>1.7</source>
+                    <source>1.8</source>
                     <javadocVersion>${javadoc.version}</javadocVersion>
                     <notimestamp>true</notimestamp>
                     <splitindex>true</splitindex>
@@ -169,6 +166,12 @@
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
+            </plugin>
+        
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>tidy-maven-plugin</artifactId>
+                <version>1.1.0</version>
             </plugin>
         </plugins>
     </build>

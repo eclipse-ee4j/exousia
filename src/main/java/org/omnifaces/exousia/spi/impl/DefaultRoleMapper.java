@@ -13,7 +13,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
-package org.omnifaces.exousia.modules.def;
+package org.omnifaces.exousia.spi.impl;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
@@ -37,11 +37,13 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.security.auth.Subject;
 
+import org.omnifaces.exousia.spi.PrincipalMapper;
+
 /**
  * 
  * @author Arjan Tijms
  */
-public class DefaultRoleMapper {
+public class DefaultRoleMapper implements PrincipalMapper {
 
     private static Object geronimoPolicyConfigurationFactoryInstance;
     private static ConcurrentMap<String, Map<Principal, Set<String>>> geronimoContextToRoleMapping;
