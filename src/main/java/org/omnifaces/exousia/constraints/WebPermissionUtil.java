@@ -14,7 +14,7 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
 
-package com.sun.enterprise.security.web.integration;
+package org.omnifaces.exousia.constraints;
 
 import java.security.Permission;
 import java.security.Permissions;
@@ -36,9 +36,10 @@ import javax.security.jacc.WebResourcePermission;
 import javax.security.jacc.WebRoleRefPermission;
 import javax.security.jacc.WebUserDataPermission;
 
+import org.omnifaces.exousia.constraints.LogUtils;
+
 import com.sun.enterprise.deployment.*;
 import com.sun.enterprise.deployment.web.*;
-import com.sun.enterprise.security.web.integration.LogUtils;
 
 /**
  * This class is used for generating Web permissions based on the deployment descriptor.
