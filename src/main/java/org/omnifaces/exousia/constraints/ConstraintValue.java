@@ -136,8 +136,8 @@ public class ConstraintValue {
         }
         addConnectType(udc == null ? null : udc.getTransportGuarantee());
 
-        if (WebPermissionUtil.logger.isLoggable(Level.FINE)) {
-            WebPermissionUtil.logger.log(Level.FINE, "JACC: setOutcome yields: " + toString());
+        if (ConstraintsToPermissionsTransformer.logger.isLoggable(Level.FINE)) {
+            ConstraintsToPermissionsTransformer.logger.log(Level.FINE, "JACC: setOutcome yields: " + toString());
         }
 
     }

@@ -26,7 +26,7 @@ public class MapValue {
 
     MapValue(String urlPattern) {
         this.committed = false;
-        this.patternType = WebPermissionUtil.patternType(urlPattern);
+        this.patternType = ConstraintsToPermissionsTransformer.patternType(urlPattern);
         this.patternLength = urlPattern.length();
         this.irrelevantByQualifier = false;
         this.urlPatternSpec = new StringBuffer(urlPattern);
@@ -34,7 +34,7 @@ public class MapValue {
     }
 
     void addQualifier(String urlPattern) {
-        if (WebPermissionUtil.implies(urlPattern, this.urlPatternSpec.substring(0, this.patternLength)))
+        if (ConstraintsToPermissionsTransformer.implies(urlPattern, this.urlPatternSpec.substring(0, this.patternLength)))
             this.irrelevantByQualifier = true;
         this.urlPatternSpec.append(":" + urlPattern);
     }
@@ -47,8 +47,8 @@ public class MapValue {
                 methodValue = new MethodValue(methodName, otherConstraint);
                 methodValues.put(methodName, methodValue);
 
-                if (WebPermissionUtil.logger.isLoggable(Level.FINE)) {
-                    WebPermissionUtil.logger.log(Level.FINE, "JACC: created MethodValue: " + methodValue);
+                if (ConstraintsToPermissionsTransformer.logger.isLoggable(Level.FINE)) {
+                    ConstraintsToPermissionsTransformer.logger.log(Level.FINE, "JACC: created MethodValue: " + methodValue);
                 }
             }
             return methodValue;
@@ -276,15 +276,15 @@ public class MapValue {
                 Object[] args = new Object[] { urlPatternSpec, uncoveredMethods };
                 if (deny) {
                     if (otherIsUncovered) {
-                        WebPermissionUtil.logger.log(Level.INFO, LogUtils.NOT_EXCLUDED_METHODS, args);
+                        ConstraintsToPermissionsTransformer.logger.log(Level.INFO, LogUtils.NOT_EXCLUDED_METHODS, args);
                     } else {
-                        WebPermissionUtil.logger.log(Level.INFO, LogUtils.EXCLUDED_METHODS, args);
+                        ConstraintsToPermissionsTransformer.logger.log(Level.INFO, LogUtils.EXCLUDED_METHODS, args);
                     }
                 } else {
                     if (otherIsUncovered) {
-                        WebPermissionUtil.logger.log(Level.WARNING, LogUtils.NOT_UNCOVERED_METHODS, args);
+                        ConstraintsToPermissionsTransformer.logger.log(Level.WARNING, LogUtils.NOT_UNCOVERED_METHODS, args);
                     } else {
-                        WebPermissionUtil.logger.log(Level.WARNING, LogUtils.UNCOVERED_METHODS, args);
+                        ConstraintsToPermissionsTransformer.logger.log(Level.WARNING, LogUtils.UNCOVERED_METHODS, args);
                     }
                 }
             }

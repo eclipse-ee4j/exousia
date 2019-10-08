@@ -47,11 +47,11 @@ import com.sun.enterprise.deployment.web.*;
  * @author Jean-Francois Arcand
  * @author Ron Monzillo
  */
-public class WebPermissionUtil {
+public class ConstraintsToPermissionsTransformer {
 
     static Logger logger = LogUtils.getLogger();
 
-    public WebPermissionUtil() {
+    public ConstraintsToPermissionsTransformer() {
     }
 
     /* changed to order default pattern / below extension */
