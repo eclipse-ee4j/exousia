@@ -1,11 +1,35 @@
-package org.omnifaces.exousia.constraints;
+/*
+ * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v. 2.0, which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * This Source Code may also be made available under the following Secondary
+ * Licenses when the conditions for such availability set forth in the
+ * Eclipse Public License v. 2.0 are satisfied: GNU General Public License,
+ * version 2 with the GNU Classpath Exception, which is available at
+ * https://www.gnu.org/software/classpath/license.html.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
+ */
+
+package org.omnifaces.exousia.constraints.transformer;
 
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collection;
+import java.util.List;
 
+/**
+ * @author Harpreet Singh
+ * @author Jean-Francois Arcand
+ * @author Ron Monzillo
+ * @author Arjan Tijms (refactoring)
+ */
 public class MethodValue extends ConstraintValue {
 
-    private static final ArrayList<String> methodNames = new ArrayList();
+    private static final List<String> methodNames = new ArrayList<>();
 
     int index;
 
@@ -40,11 +64,11 @@ public class MethodValue extends ConstraintValue {
             return null;
         }
 
-        StringBuffer actions = null;
+        StringBuilder actions = null;
 
         for (int i = methodSet.nextSetBit(0); i >= 0; i = methodSet.nextSetBit(i + 1)) {
             if (actions == null) {
-                actions = new StringBuffer();
+                actions = new StringBuilder();
             } else {
                 actions.append(",");
             }
@@ -54,37 +78,21 @@ public class MethodValue extends ConstraintValue {
         return (actions == null ? null : actions.toString());
     }
 
-    static String[] getMethodArray(BitSet methodSet) {
-        if (methodSet == null || methodSet.isEmpty()) {
-            return null;
-        }
-
-        int size = 0;
-
-        ArrayList<String> methods = new ArrayList();
-
-        for (int i = methodSet.nextSetBit(0); i >= 0; i = methodSet.nextSetBit(i + 1)) {
-            methods.add(getMethodName(i));
-            size += 1;
-        }
-
-        return (String[]) methods.toArray(new String[size]);
-    }
-
-    static BitSet methodArrayToSet(String[] methods) {
+    static BitSet encodeMethodsToBits(Collection<String> methods) {
         BitSet methodSet = new BitSet();
 
-        for (int i = 0; methods != null && i < methods.length; i++) {
-            if (methods[i] == null) {
+        for (String method : methods) {
+            if (method == null) {
                 throw new IllegalArgumentException("constraint translation error - null method name");
             }
-            int bit = getMethodIndex(methods[i]);
-            methodSet.set(bit);
+            
+            methodSet.set(getMethodIndex(method));
         }
 
         return methodSet;
     }
 
+    @Override
     public String toString() {
         return "MethodValue( " + getMethodName(index) + super.toString() + " )";
     }

@@ -16,12 +16,20 @@
 
 package org.omnifaces.exousia;
 
+import static org.omnifaces.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
+import static org.omnifaces.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
+
 import java.security.CodeSource;
 import java.security.Permission;
+import java.security.Permissions;
 import java.security.Policy;
 import java.security.Principal;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -34,6 +42,8 @@ import javax.security.jacc.WebResourcePermission;
 import javax.security.jacc.WebUserDataPermission;
 import javax.servlet.http.HttpServletRequest;
 
+import org.omnifaces.exousia.constraints.SecurityConstraint;
+import org.omnifaces.exousia.permissions.JakartaPermissions;
 import org.omnifaces.exousia.spi.PrincipalMapper;
 
 /**
@@ -108,6 +118,37 @@ public class AuthorizationService {
         } catch (IllegalAccessException | InstantiationException | PolicyContextException | ClassNotFoundException e) {
             throw new IllegalStateException(e);
         }
+    }
+    
+    public void addConstraintsToPolicy(List<SecurityConstraint> securityConstraints, Set<String> declaredRoles, boolean isDenyUncoveredHttpMethods, Collection<String> servletNames) {
+        try {
+            JakartaPermissions jakartaPermissions = createResourceAndDataPermissions(declaredRoles, isDenyUncoveredHttpMethods, securityConstraints);
+        
+            // Add the translated/generated excluded permissions
+            policyConfiguration.addToExcludedPolicy(jakartaPermissions.getExcluded());
+
+            // Add the translated/generated unchecked permissions
+            policyConfiguration.addToUncheckedPolicy(jakartaPermissions.getUnchecked());
+            
+            // Add the translated/generated per role resource permissions
+            for (Entry<String, Permissions> roleEntry : jakartaPermissions.getPerRole().entrySet()) {
+                policyConfiguration.addToRole(roleEntry.getKey(), roleEntry.getValue());
+            }
+            
+            Map<String, Permissions> roleRefPermissions = createWebRoleRefPermission(declaredRoles, servletNames);
+            
+            // Add the translated/generated per role role-ref permissions
+            for (Entry<String, Permissions> roleEntry : roleRefPermissions.entrySet()) {
+                policyConfiguration.addToRole(roleEntry.getKey(), roleEntry.getValue());
+            }
+            
+            // TEMP TEMP TEMP!
+            policyConfiguration.commit();
+            
+        } catch (PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
+        
     }
     
     public PolicyConfiguration getPolicyConfiguration() {
