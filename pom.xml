@@ -21,7 +21,7 @@
 
     <groupId>org.omnifaces</groupId>
     <artifactId>exousia</artifactId>
-    <version>0.3</version>
+    <version>0.4-SNAPSHOT</version>
 
     <name>Exousia</name>
     <description>
