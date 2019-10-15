@@ -32,6 +32,10 @@ public class SecurityConstraint {
     private final Set<String> rolesAllowed;
     private final TransportGuarantee transportGuarantee;
     
+    public SecurityConstraint(String urlPattern, String... rolesAllowed) {
+        this(new WebResourceCollection(urlPattern), rolesAllowed);
+    }
+    
     public SecurityConstraint(WebResourceCollection webResourceCollection, String... rolesAllowed) {
         this(asList(webResourceCollection), asList(rolesAllowed));
     }
