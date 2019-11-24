@@ -27,6 +27,8 @@ import java.util.Set;
 
 import javax.servlet.HttpMethodConstraintElement;
 import javax.servlet.ServletSecurityElement;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.ServletSecurity;
 import javax.servlet.annotation.ServletSecurity.EmptyRoleSemantic;
 import javax.servlet.annotation.ServletSecurity.TransportGuarantee;
 
@@ -70,6 +72,43 @@ public class ElementsToConstraintsTransformer {
                 servletSecurityElement.getRolesAllowed(),
                 servletSecurityElement.getEmptyRoleSemantic(), 
                 servletSecurityElement.getTransportGuarantee(), 
+                null,
+                httpMethodOmissions));
+        
+        return constraints;
+    }
+    
+    public static List<SecurityConstraint> createConstraints(Set<String> urlPatterns, ServletSecurity servletSecurity) {
+        if (urlPatterns.isEmpty()) {
+            return emptyList();
+        }
+
+        List<SecurityConstraint> constraints = new ArrayList<>();
+        Set<String> httpMethodOmissions = new HashSet<>();
+        
+        // Handle the constraints that hold for specific HTTP methods
+
+        for (HttpMethodConstraint httpMethodConstraint : servletSecurity.httpMethodConstraints()) {
+            constraints.add(createSecurityConstraint(
+                urlPatterns, 
+                httpMethodConstraint.rolesAllowed(),
+                httpMethodConstraint.emptyRoleSemantic(), 
+                httpMethodConstraint.transportGuarantee(), 
+                httpMethodConstraint.value(),
+                emptySet()));
+
+            // Methods handled by the httpMethodConstraint are not handled by special "all methods" constraint 
+            httpMethodOmissions.add(httpMethodConstraint.value());
+        }
+        
+        // Handle the special constraint that holds for all HTTP methods, accept those handled by the method
+        // specific constraints
+        
+        constraints.add(createSecurityConstraint(
+                urlPatterns, 
+                servletSecurity.value().rolesAllowed(),
+                servletSecurity.value().value(), 
+                servletSecurity.value().transportGuarantee(), 
                 null,
                 httpMethodOmissions));
         
