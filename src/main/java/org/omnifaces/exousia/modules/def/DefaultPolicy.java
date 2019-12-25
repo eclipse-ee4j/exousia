@@ -16,6 +16,7 @@
 package org.omnifaces.exousia.modules.def;
 import static java.util.Arrays.asList;
 import static java.util.Collections.list;
+import static java.util.logging.Level.SEVERE;
 import static org.omnifaces.exousia.modules.def.DefaultPolicyConfigurationFactory.getCurrentPolicyConfiguration;
 
 import java.security.CodeSource;
@@ -25,8 +26,10 @@ import java.security.Permissions;
 import java.security.Policy;
 import java.security.Principal;
 import java.security.ProtectionDomain;
+import java.security.Security;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
 import javax.security.jacc.PolicyContext;
@@ -39,8 +42,10 @@ import org.omnifaces.exousia.spi.PrincipalMapper;
  * @author Arjan Tijms
  */
 public class DefaultPolicy extends Policy {
+    
+    private final static Logger logger = Logger.getLogger(DefaultPolicy.class.getName());
 
-    private Policy previousPolicy = Policy.getPolicy();
+    private Policy defaultPolicy = getDefaultPolicy();
 
     @Override
     public boolean implies(ProtectionDomain domain, Permission permission) {
@@ -88,8 +93,8 @@ public class DefaultPolicy extends Policy {
         // TODO: Should we not distinguish between JACC and Java SE Permissions at the start of this method? Seems
         //       very unlikely that JACC would ever say anything about a Java SE Permission, or that the Java SE
         //       policy says anything about a JACC Permission. Why are these two systems even combined in the first place?
-        if (previousPolicy != null) {
-            return previousPolicy.implies(domain, permission);
+        if (defaultPolicy != null) {
+            return defaultPolicy.implies(domain, permission);
         }
 
         return false;
@@ -106,8 +111,8 @@ public class DefaultPolicy extends Policy {
         Permissions excludedPermissions = policyConfiguration.getExcludedPermissions();
 
         // First get all permissions from the previous (original) policy
-        if (previousPolicy != null) {
-            collectPermissions(previousPolicy.getPermissions(domain), permissions, excludedPermissions);
+        if (defaultPolicy != null) {
+            collectPermissions(defaultPolicy.getPermissions(domain), permissions, excludedPermissions);
         }
 
         // If there are any static permissions, add those next
@@ -151,8 +156,8 @@ public class DefaultPolicy extends Policy {
         Permissions excludedPermissions = policyConfiguration.getExcludedPermissions();
 
         // First get all permissions from the previous (original) policy
-        if (previousPolicy != null) {
-            collectPermissions(previousPolicy.getPermissions(codesource), permissions, excludedPermissions);
+        if (defaultPolicy != null) {
+            collectPermissions(defaultPolicy.getPermissions(codesource), permissions, excludedPermissions);
         }
 
         // Secondly get the static permissions. Note that there are only two sources possible here, without
@@ -160,6 +165,22 @@ public class DefaultPolicy extends Policy {
         collectPermissions(policyConfiguration.getUncheckedPermissions(), permissions, excludedPermissions);
 
         return permissions;
+    }
+    
+    
+    // ### Private methods
+    
+    private Policy getDefaultPolicy() {
+        String policyClass = Security.getProperty("policy.provider");
+        if (policyClass != null) {
+            try {
+                return (Policy) Class.forName(policyClass).newInstance();
+            } catch (Exception e) {
+                logger.log(SEVERE, "Failed to instantiate " + policyClass, e);
+            }
+        }
+        
+        return null;
     }
 
     private boolean isExcluded(Permissions excludedPermissions, Permission permission) {
