@@ -20,7 +20,7 @@ import java.security.Permissions;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyContextException;
  
 /**
  * 

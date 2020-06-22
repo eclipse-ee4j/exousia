@@ -34,13 +34,13 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import javax.security.auth.Subject;
-import javax.security.jacc.PolicyConfiguration;
-import javax.security.jacc.PolicyConfigurationFactory;
-import javax.security.jacc.PolicyContext;
-import javax.security.jacc.PolicyContextException;
-import javax.security.jacc.WebResourcePermission;
-import javax.security.jacc.WebUserDataPermission;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
+import jakarta.security.jacc.WebResourcePermission;
+import jakarta.security.jacc.WebUserDataPermission;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.omnifaces.exousia.constraints.SecurityConstraint;
 import org.omnifaces.exousia.permissions.JakartaPermissions;
@@ -52,10 +52,10 @@ import org.omnifaces.exousia.spi.PrincipalMapper;
  */
 public class AuthorizationService {
     
-    public static final String HTTP_SERVLET_REQUEST = "javax.servlet.http.HttpServletRequest";
+    public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
     
-    public static final String FACTORY = "javax.security.jacc.PolicyConfigurationFactory.provider";
+    public static final String FACTORY = "jakarta.security.jacc.PolicyConfigurationFactory.provider";
     
     public static final String PRINCIPAL_MAPPER = "jakarta.authorization.PrincipalMapper.provider";
 

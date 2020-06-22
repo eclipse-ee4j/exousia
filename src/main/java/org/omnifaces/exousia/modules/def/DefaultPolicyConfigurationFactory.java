@@ -15,14 +15,14 @@
  */
 package org.omnifaces.exousia.modules.def;
 
-import static javax.security.jacc.PolicyContext.getContextID;
+import static jakarta.security.jacc.PolicyContext.getContextID;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.security.jacc.PolicyConfiguration;
-import javax.security.jacc.PolicyConfigurationFactory;
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContextException;
 
 /**
  * 

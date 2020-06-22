@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import javax.servlet.annotation.ServletSecurity.TransportGuarantee;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
 /**
  * @author Harpreet Singh

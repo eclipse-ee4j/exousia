@@ -18,19 +18,19 @@ package org.omnifaces.exousia.constraints.transformer;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
-import static javax.servlet.annotation.ServletSecurity.EmptyRoleSemantic.DENY;
+import static jakarta.servlet.annotation.ServletSecurity.EmptyRoleSemantic.DENY;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.HttpMethodConstraintElement;
-import javax.servlet.ServletSecurityElement;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.ServletSecurity;
-import javax.servlet.annotation.ServletSecurity.EmptyRoleSemantic;
-import javax.servlet.annotation.ServletSecurity.TransportGuarantee;
+import jakarta.servlet.HttpMethodConstraintElement;
+import jakarta.servlet.ServletSecurityElement;
+import jakarta.servlet.annotation.HttpMethodConstraint;
+import jakarta.servlet.annotation.ServletSecurity;
+import jakarta.servlet.annotation.ServletSecurity.EmptyRoleSemantic;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
 import org.omnifaces.exousia.constraints.SecurityConstraint;
 import org.omnifaces.exousia.constraints.WebResourceCollection;

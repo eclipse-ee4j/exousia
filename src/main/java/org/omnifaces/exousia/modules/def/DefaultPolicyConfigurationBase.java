@@ -20,8 +20,8 @@ import static java.util.Collections.list;
 import java.security.Permission;
 import java.security.PermissionCollection;
 
-import javax.security.jacc.PolicyConfiguration;
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyContextException;
 
 /**
  * 

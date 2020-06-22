@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import javax.security.jacc.PolicyContextException;
-import javax.security.jacc.WebRoleRefPermission;
+import jakarta.security.jacc.PolicyContextException;
+import jakarta.security.jacc.WebRoleRefPermission;
 
 import org.omnifaces.exousia.constraints.transformer.ConstraintsToPermissionsTransformer;
 
