@@ -54,7 +54,7 @@ public class SecurityConstraint {
 
     public SecurityConstraint(List<WebResourceCollection> webResourceCollections, Set<String> rolesAllowed, TransportGuarantee transportGuarantee) {
         this.webResourceCollections = unmodifiableList(webResourceCollections);
-        this.rolesAllowed = unmodifiableSet(rolesAllowed);
+        this.rolesAllowed = rolesAllowed == null ? null : unmodifiableSet(rolesAllowed);
         this.transportGuarantee = transportGuarantee;
     }
 
