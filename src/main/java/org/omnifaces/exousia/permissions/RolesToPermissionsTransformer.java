@@ -22,7 +22,6 @@ import java.security.Permission;
 import java.security.Permissions;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +32,7 @@ import javax.security.jacc.PolicyContextException;
 import javax.security.jacc.WebRoleRefPermission;
 
 import org.omnifaces.exousia.constraints.transformer.ConstraintsToPermissionsTransformer;
+import org.omnifaces.exousia.mapping.SecurityRoleRef;
 
 /**
  * @author Harpreet Singh
@@ -42,41 +42,39 @@ import org.omnifaces.exousia.constraints.transformer.ConstraintsToPermissionsTra
  */
 public class RolesToPermissionsTransformer {
     static final Logger logger = Logger.getLogger(ConstraintsToPermissionsTransformer.class.getName());
-    
+
     public static final String ANY_AUTHENTICATED_CALLER_ROLE = "**";
-    
+
     private static final String CLASS_NAME = ConstraintsToPermissionsTransformer.class.getSimpleName();
 
-    public static Map<String, Permissions> createWebRoleRefPermission(Set<String> declaredRoles, Collection<String> servletNames) throws PolicyContextException {
+    public static Map<String, Permissions> createWebRoleRefPermission(Set<String> declaredRoles, Map<String, List<SecurityRoleRef>> servletRoleMappings) throws PolicyContextException {
         if (logger.isLoggable(FINE)) {
             logger.entering(CLASS_NAME, "createWebRoleRefPermission");
-            logger.log(FINE, "Jakarta Authorization: role-reference translation: Processing WebRoleRefPermission : CODEBASE = ");
+            logger.log(FINE, "Jakarta Authorization: role-reference translation: Processing WebRoleRefPermission");
         }
-        
+
         Map<String, Permissions> roleMap = new HashMap<String, Permissions>();
-        
+
 
         List<String> servletScopedRoleNames = new ArrayList<>();
 
-        
+
         boolean rolesetContainsAnyAuthUserRole = declaredRoles.contains(ANY_AUTHENTICATED_CALLER_ROLE);
 
         // Look at local roles per Servlet
 
-        for (String servletName : servletNames) {
-            addPermissionsForRoleRefRoles(Collections.emptyList(), servletScopedRoleNames, servletName, roleMap);
+        for (Map.Entry<String, List<SecurityRoleRef>> servletEntry : servletRoleMappings.entrySet()) {
+            addPermissionsForRoleRefRoles(servletEntry, servletScopedRoleNames, roleMap);
 
-            if (logger.isLoggable(FINE)) {
-                logger.fine("JACC: role-reference translation: Going through the list of roles not present in RoleRef elements and creating WebRoleRefPermissions ");
-            }
+            logger.fine("Jakarta Authorization: role-reference translation: Going through the list of roles not present in RoleRef elements and creating WebRoleRefPermissions ");
 
             // We insert identity mapped (one to one) roles for all declared roles that do not have a servlet local role (role refs) mapping.
-            // Role refs are an artifact from the "reffing days" in J2EE and not commonly used anymore.          
-            addPermissionsForNonRoleRefRoles(declaredRoles, servletScopedRoleNames, servletName, roleMap);
+            // Role refs are an artifact from the "reffing days" in J2EE and not commonly used anymore.
+            addPermissionsForNonRoleRefRoles(declaredRoles, servletScopedRoleNames, servletEntry.getKey(), roleMap);
 
             // JACC MR8 add WebRoleRefPermission for the any authenticated user role '**'
             if ((!servletScopedRoleNames.contains(ANY_AUTHENTICATED_CALLER_ROLE)) && !rolesetContainsAnyAuthUserRole) {
-                addAnyAuthenticatedUserRoleRef(roleMap, servletName);
+                addAnyAuthenticatedUserRoleRef(roleMap, servletEntry.getKey());
             }
         }
 
@@ -101,10 +99,10 @@ public class RolesToPermissionsTransformer {
         if (logger.isLoggable(FINE)) {
             logger.exiting(CLASS_NAME, "createWebRoleRefPermission");
         }
-        
+
         return roleMap;
     }
-    
+
     /**
      * Adds <code>WebRoleRefPermission</code>s to the <code>Map</code> based on the passed in collection of declared roles.
      *
@@ -126,29 +124,27 @@ public class RolesToPermissionsTransformer {
         }
     }
 
-    private static void addPermissionsForRoleRefRoles(Collection<String> localRoles, Collection<String> servletScopedRoleNames, String servletName, Map<String, Permissions> roleMap) {
-        for (String localRole : localRoles) {
-            if (localRole != null) {
+    private static void addPermissionsForRoleRefRoles(Map.Entry<String, List<SecurityRoleRef>> servletEntry, Collection<String> servletScopedRoleNames, Map<String, Permissions> roleMap) {
+        for (SecurityRoleRef securityRoleRef : servletEntry.getValue()) {
 
                 // The name of a local role, which is a role scoped to a single Servlet
-                servletScopedRoleNames.add(localRole);
+                servletScopedRoleNames.add(securityRoleRef.getRoleName());
 
                 // The name of the global role, which is the role a local role is mapped to (aka is linked to)
-                String globalRole = localRole; //roleReference.getSecurityRoleLink().getName();
+                String globalRole = securityRoleRef.getRoleLink();
 
                 // Add the role reference to the outcome
-                addToRoleMap(roleMap, 
+                addToRoleMap(roleMap,
                     globalRole,
-                    new WebRoleRefPermission(servletName, localRole));
+                    new WebRoleRefPermission(servletEntry.getKey(), securityRoleRef.getRoleName()));
 
                 if (logger.isLoggable(FINE)) {
                     logger.fine(
                         "Jakarta Authorization: role-reference translation: " +
-                         "RoleRefPermission created with name (servlet-name) = " + servletName +
-                         " and action (role-name tag) = " + localRole +
+                         "WebRoleRefPermission created with name (servlet-name) = " + servletEntry.getKey() +
+                         " and action (role-name tag) = " + securityRoleRef.getRoleName() +
                          " added to role (role-link tag) = " + globalRole);
                 }
-            }
         }
     }
 
@@ -187,7 +183,7 @@ public class RolesToPermissionsTransformer {
             logger.fine("Jakarta Authorization: any authenticated user role-reference translation: Permission added for role-ref =" + name + " " + ANY_AUTHENTICATED_CALLER_ROLE);
         }
     }
-    
+
     private static void addToRoleMap(Map<String, Permissions> roleMap, String role, Permission permission) {
         roleMap.computeIfAbsent(role, e -> new Permissions())
                .add(permission);
