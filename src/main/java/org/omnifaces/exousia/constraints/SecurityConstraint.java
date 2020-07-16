@@ -18,6 +18,8 @@ package org.omnifaces.exousia.constraints;
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 
 import java.util.HashSet;
@@ -68,6 +70,35 @@ public class SecurityConstraint {
 
     public Set<String> getRolesAllowed() {
         return rolesAllowed;
+    }
+
+
+
+    // ### Static utility methods that work on constraints
+
+
+    public static List<SecurityConstraint> join(List<SecurityConstraint> constraintsA, List<SecurityConstraint> constraintsB, List<SecurityConstraint> constraintsC, List<SecurityConstraint> constraintsD) {
+        return join(join(constraintsA, constraintsB, constraintsC), constraintsD);
+    }
+
+    public static List<SecurityConstraint> join(List<SecurityConstraint> constraintsA, List<SecurityConstraint> constraintsB, List<SecurityConstraint> constraintsC) {
+        return join(join(constraintsA, constraintsB), constraintsC);
+    }
+
+    public static List<SecurityConstraint> join(List<SecurityConstraint> constraintsA, List<SecurityConstraint> constraintsB) {
+        if (constraintsA == null && constraintsB == null) {
+            return null;
+        }
+
+        if (constraintsA != null && constraintsB != null) {
+            return concat(constraintsA.stream(), constraintsB.stream()).collect(toList());
+        }
+
+        if (constraintsA != null) {
+            return constraintsA;
+        }
+
+        return constraintsB;
     }
 
 }
