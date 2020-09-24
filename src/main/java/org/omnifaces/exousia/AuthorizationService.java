@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.security.auth.Subject;
@@ -81,6 +82,7 @@ public class AuthorizationService {
         this(factoryClass, policyClass, contextId, requestSupplier, subjectSupplier, null);
     }
 
+    @SuppressWarnings("unchecked")
     public AuthorizationService(
             Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
             Supplier<HttpServletRequest> requestSupplier,
@@ -91,10 +93,6 @@ public class AuthorizationService {
             System.setProperty(FACTORY, factoryClass.getName());
             factory = PolicyConfigurationFactory.getPolicyConfigurationFactory();
             policyConfiguration = factory.getPolicyConfiguration(contextId, false);
-
-            // Install the authorization policy
-            Policy.setPolicy(policyClass.newInstance());
-            policy = Policy.getPolicy();
 
             // Sets the context Id (aka application Id), which may be used by authorization modules to get the right
             // authorization config
@@ -116,6 +114,15 @@ public class AuthorizationService {
                 new DefaultPolicyContextHandler(PRINCIPAL_MAPPER, () -> principalMapper),
                 true);
 
+            Policy existingPolicy = Policy.getPolicy();
+            if (existingPolicy instanceof Consumer) {
+                ((Consumer<Policy>) existingPolicy).accept(policyClass.newInstance());
+            } else {
+                // Install the authorization policy
+                Policy.setPolicy(policyClass.newInstance());
+            }
+
+            policy = Policy.getPolicy();
         } catch (IllegalAccessException | InstantiationException | PolicyContextException | ClassNotFoundException e) {
             throw new IllegalStateException(e);
         }
