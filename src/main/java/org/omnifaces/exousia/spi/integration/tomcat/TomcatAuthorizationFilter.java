@@ -39,8 +39,10 @@ import org.omnifaces.exousia.constraints.WebResourceCollection;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletRequestEvent;
 import jakarta.servlet.ServletRequestListener;
+import jakarta.servlet.ServletRequestWrapper;
 import jakarta.servlet.http.HttpFilter;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -142,11 +144,17 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
      * @return the Subject if the caller authenticated via Jakarta Authentication (JASPIC), otherwise null
      */
     private static Subject getSubject(HttpServletRequest httpServletRequest) {
-        return (Subject) getRequest(httpServletRequest).getNote(REQ_JASPIC_SUBJECT_NOTE);
+        return (Subject) getRequest(unwrapFully(httpServletRequest)).getNote(REQ_JASPIC_SUBJECT_NOTE);
     }
 
-    private static Request getRequest(HttpServletRequest servletRequest) {
-        return getRequest((RequestFacade) servletRequest);
+    @SuppressWarnings("unchecked")
+    private static <T extends ServletRequest> T unwrapFully(ServletRequest request) {
+        ServletRequest currentRequest = request;
+        while (currentRequest instanceof ServletRequestWrapper) {
+            ServletRequestWrapper wrapper = (ServletRequestWrapper) currentRequest;
+            currentRequest = wrapper.getRequest();
+        }
+        return (T) currentRequest;
     }
 
     private static Request getRequest(RequestFacade facade) {
