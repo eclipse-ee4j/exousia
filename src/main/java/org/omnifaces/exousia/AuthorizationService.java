@@ -36,6 +36,8 @@ import javax.security.auth.Subject;
 
 import org.omnifaces.exousia.constraints.SecurityConstraint;
 import org.omnifaces.exousia.mapping.SecurityRoleRef;
+import org.omnifaces.exousia.modules.def.DefaultPolicy;
+import org.omnifaces.exousia.modules.def.DefaultPolicyConfigurationFactory;
 import org.omnifaces.exousia.permissions.JakartaPermissions;
 import org.omnifaces.exousia.spi.PrincipalMapper;
 
@@ -46,6 +48,7 @@ import jakarta.security.jacc.PolicyContextException;
 import jakarta.security.jacc.WebResourcePermission;
 import jakarta.security.jacc.WebRoleRefPermission;
 import jakarta.security.jacc.WebUserDataPermission;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -74,6 +77,26 @@ public class AuthorizationService {
     private final CodeSource emptyCodeSource = new CodeSource(null, (Certificate[]) null);
 
     private final ProtectionDomain emptyProtectionDomain = newProtectionDomain(null);
+
+    public AuthorizationService(
+            ServletContext servletContext,
+            Supplier<HttpServletRequest> requestSupplier,
+            Supplier<Subject> subjectSupplier) {
+        this(
+            DefaultPolicyConfigurationFactory.class,
+            DefaultPolicy.class,
+            getServletContextId(servletContext), requestSupplier, subjectSupplier);
+    }
+
+    public AuthorizationService(
+            String contextId,
+            Supplier<HttpServletRequest> requestSupplier,
+            Supplier<Subject> subjectSupplier) {
+        this(
+            DefaultPolicyConfigurationFactory.class,
+            DefaultPolicy.class,
+            contextId, requestSupplier, subjectSupplier);
+    }
 
     public AuthorizationService(
             Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
@@ -171,7 +194,7 @@ public class AuthorizationService {
 
             return checkPermission(
                     new WebResourcePermission(
-                        getConstrainedURI(request), request.getMethod()), subject.getPrincipals());
+                    getConstrainedURI(request), request.getMethod()), subject.getPrincipals());
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
@@ -216,6 +239,14 @@ public class AuthorizationService {
 
     private String getRequestRelativeURI(HttpServletRequest request) {
         return request.getRequestURI().substring(request.getContextPath().length());
+    }
+
+    public static String getServletContextId(ServletContext context) {
+        return context.getVirtualServerName() + " " + context.getContextPath();
+    }
+
+    public static void setThreadContextId(ServletContext context) {
+        PolicyContext.setContextID(getServletContextId(context));
     }
 
 }
