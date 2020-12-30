@@ -15,55 +15,55 @@
  */
 package org.omnifaces.exousia.modules.def;
 
-import static javax.security.jacc.PolicyContext.getContextID;
+import static jakarta.security.jacc.PolicyContext.getContextID;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import javax.security.jacc.PolicyConfiguration;
-import javax.security.jacc.PolicyConfigurationFactory;
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContextException;
 
 /**
- * 
+ *
  * @author Arjan Tijms
  */
 public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactory {
-     
+
     private static final ConcurrentMap<String, DefaultPolicyConfigurationStateMachine> configurators = new ConcurrentHashMap<>();
- 
+
     @Override
     public PolicyConfiguration getPolicyConfiguration(String contextID, boolean remove) throws PolicyContextException {
-         
+
         if (!configurators.containsKey(contextID)) {
             configurators.putIfAbsent(contextID, new DefaultPolicyConfigurationStateMachine(new DefaultPolicyConfiguration(contextID)));
         }
-         
+
         DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
-         
+
         if (remove) {
             defaultPolicyConfigurationStateMachine.delete();
         }
-         
+
         // According to the contract of getPolicyConfiguration() every PolicyConfiguration returned from here
         // should always be transitioned to the OPEN state.
         defaultPolicyConfigurationStateMachine.open();
-         
+
         return defaultPolicyConfigurationStateMachine;
     }
-     
+
     @Override
     public boolean inService(String contextID) throws PolicyContextException {
         DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
         if (defaultPolicyConfigurationStateMachine == null) {
             return false;
         }
-         
+
         return defaultPolicyConfigurationStateMachine.inService();
     }
-     
+
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
         return (DefaultPolicyConfiguration) configurators.get(getContextID()).getPolicyConfiguration();
     }
-     
+
 }

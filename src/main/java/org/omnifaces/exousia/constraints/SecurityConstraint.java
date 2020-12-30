@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 OmniFaces. All rights reserved.
+ * Copyright (c) 2019, 2020 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -20,13 +20,13 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.concat;
-import static javax.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
+import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.servlet.annotation.ServletSecurity.TransportGuarantee;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
 public class SecurityConstraint {
 

@@ -24,27 +24,31 @@ import java.util.List;
 import java.util.Set;
 
 public class WebResourceCollection {
-    
+
     private final Set<String> urlPatterns;
     private final Set<String> httpMethods;
     private final Set<String> httpMethodOmissions;
-    
+
     public WebResourceCollection(String... urlPatterns) {
         this(asList(urlPatterns));
     }
-    
+
     public WebResourceCollection(List<String> urlPatterns) {
         this(new HashSet<>(urlPatterns), emptySet(), emptySet());
     }
-    
-    public WebResourceCollection(List<String> urlPatterns, List<String> httpMethods, List<String> httpMethodOmissions) {
-        this(new HashSet<>(urlPatterns), new HashSet<>(httpMethods), new HashSet<>(httpMethodOmissions));
-    }
-    
+
     public WebResourceCollection(Set<String> urlPatterns, Set<String> httpMethods) {
         this(urlPatterns, httpMethods, emptySet());
     }
-    
+
+    public WebResourceCollection(String[] urlPatterns, String[] httpMethods, String[] httpMethodOmissions) {
+        this(asList(urlPatterns), asList(httpMethods), asList(httpMethodOmissions));
+    }
+
+    public WebResourceCollection(List<String> urlPatterns, List<String> httpMethods, List<String> httpMethodOmissions) {
+        this(new HashSet<>(urlPatterns), new HashSet<>(httpMethods), new HashSet<>(httpMethodOmissions));
+    }
+
     public WebResourceCollection(Set<String> urlPatterns, Set<String> httpMethods, Set<String> httpMethodOmissions) {
         this.urlPatterns = unmodifiableSet(urlPatterns);
         this.httpMethods = unmodifiableSet(httpMethods);
@@ -63,5 +67,5 @@ public class WebResourceCollection {
         return httpMethodOmissions;
     }
 
-   
+
 }

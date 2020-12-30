@@ -18,8 +18,8 @@ package org.omnifaces.exousia;
 
 import java.util.function.Supplier;
 
-import javax.security.jacc.PolicyContextException;
-import javax.security.jacc.PolicyContextHandler;
+import jakarta.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyContextHandler;
 
 /**
  * 

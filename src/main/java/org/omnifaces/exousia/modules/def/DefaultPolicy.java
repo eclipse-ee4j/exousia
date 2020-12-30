@@ -32,8 +32,8 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
-import javax.security.jacc.PolicyContext;
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
 
 import org.omnifaces.exousia.spi.PrincipalMapper;
 

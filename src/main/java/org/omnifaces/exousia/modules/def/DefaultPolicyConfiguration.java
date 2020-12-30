@@ -16,8 +16,8 @@
 package org.omnifaces.exousia.modules.def;
 import static org.omnifaces.exousia.AuthorizationService.PRINCIPAL_MAPPER;
 
-import javax.security.jacc.PolicyContext;
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
 
 import org.omnifaces.exousia.spi.PrincipalMapper;
 import org.omnifaces.exousia.spi.impl.DefaultRoleMapper;

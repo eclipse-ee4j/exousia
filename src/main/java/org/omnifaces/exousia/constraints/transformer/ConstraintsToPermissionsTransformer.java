@@ -31,9 +31,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import javax.security.jacc.WebResourcePermission;
-import javax.security.jacc.WebUserDataPermission;
-import javax.servlet.annotation.ServletSecurity.TransportGuarantee;
+import jakarta.security.jacc.WebResourcePermission;
+import jakarta.security.jacc.WebUserDataPermission;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
 import org.omnifaces.exousia.constraints.SecurityConstraint;
 import org.omnifaces.exousia.constraints.WebResourceCollection;

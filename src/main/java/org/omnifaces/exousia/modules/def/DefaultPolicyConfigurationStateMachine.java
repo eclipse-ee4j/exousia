@@ -22,9 +22,9 @@ import static org.omnifaces.exousia.modules.def.DefaultPolicyConfigurationStateM
 import java.security.Permission;
 import java.security.PermissionCollection;
 
-import javax.security.jacc.PolicyConfiguration;
-import javax.security.jacc.PolicyConfigurationFactory;
-import javax.security.jacc.PolicyContextException;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContextException;
 
 /**
  * 

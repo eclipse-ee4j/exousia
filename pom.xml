@@ -21,7 +21,7 @@
 
     <groupId>org.omnifaces</groupId>
     <artifactId>exousia</artifactId>
-    <version>0.6</version>
+    <version>1.0-M2</version>
 
     <name>Exousia</name>
     <description>
@@ -65,26 +65,38 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <version>4.0.3</version>
+            <version>5.0.0</version>
         </dependency>
         <dependency>
             <groupId>jakarta.authorization</groupId>
             <artifactId>jakarta.authorization-api</artifactId>
-            <version>1.5.0</version>
+            <version>2.0.0</version>
         </dependency>
+        
+        <!-- Integration -->
+        
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>tomcat-catalina</artifactId>
+            <version>10.0.0</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        
+        <!-- Tests -->
         
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -94,7 +106,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M2</version>
+                <version>3.0.0-M3</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -111,6 +123,19 @@
                     </execution>
                 </executions>
             </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Automatic-Module-Name>org.omnifaces.exousia</Automatic-Module-Name>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
 
             <!-- Configure the jar with the sources. -->
             <plugin>
@@ -126,34 +151,32 @@
                     </execution>
                 </executions>
             </plugin>
-
-            <!-- Configure the jar with the javadoc. -->
+            
+            
+             <!-- Configure the jar with the javadoc. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.1.1</version>
-                <configuration>
-                    <source>1.8</source>
-                    <javadocVersion>${javadoc.version}</javadocVersion>
-                    <notimestamp>true</notimestamp>
-                    <splitindex>true</splitindex>
-                    <doctitle>Eleos API documentation</doctitle>
-                    <links>
-                        <link>https://javaee.github.io/javaee-spec/javadocs/</link>
-                    </links>
-                </configuration>
+                <version>3.2.0</version>
                 <executions>
                     <execution>
-                        <id>attach-javadocs</id>
+                        <id>attach-api-javadocs</id>
                         <goals>
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <additionalparam>-Xdoclint:none</additionalparam>
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
+                            <notimestamp>true</notimestamp>
+                            <splitindex>true</splitindex>
+                            <doctitle>Exousia API documentation</doctitle>
+                            <links>
+                                <link>https://jakarta.ee/specifications/platform/9/apidocs/</link>
+                            </links>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+           
 
             <!-- Configure snapshot deployment to Sonatype. -->
             <plugin>

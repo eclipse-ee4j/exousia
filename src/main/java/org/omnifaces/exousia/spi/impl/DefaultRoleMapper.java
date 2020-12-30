@@ -17,15 +17,16 @@ package org.omnifaces.exousia.spi.impl;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.list;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.security.Principal;
-// import java.security.acl.Group;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -341,6 +342,15 @@ public class DefaultRoleMapper implements PrincipalMapper {
             return groups;
         }
 
+        Set<Principal> privatePrincipals = subject.getPrivateCredentials(Principal.class);
+        for (Principal principal : privatePrincipals) {
+            if (principalToGroups(principal, groups)) {
+                // return value of true means we're done early. This can be used
+                // when we know there's only 1 principal holding all the groups
+                return groups;
+            }
+        }
+
         @SuppressWarnings("rawtypes")
         Set<Hashtable> tables = subject.getPrivateCredentials(Hashtable.class);
         if (tables != null && !tables.isEmpty()) {
@@ -371,19 +381,54 @@ public class DefaultRoleMapper implements PrincipalMapper {
                 groups.add(principal.getName());
                 break;
 
-//           case "org.jboss.security.SimpleGroup": // JBoss
-//            case "org.apache.openejb.core.security.AbstractSecurityService$Group": // TomEE
-//                if (principal.getName().equals("Roles") && principal instanceof Group) {
-//                    Group rolesGroup = (Group) principal;
-//                    for (Principal groupPrincipal : list(rolesGroup.members())) {
-//                        groups.add(groupPrincipal.getName());
-//                    }
-//
-//                    // Should only be one group holding the roles, so can exit the loop
-//                    // early
-//                    return true;
-//                }
-            }
+            case "org.apache.openejb.core.security.AbstractSecurityService$Group": // TomEE 1
+            case "org.jboss.security.SimpleGroup": // JBoss EAP/WildFly
+                if (principal.getName().equals("Roles") && principal.getClass().getName().equals("org.jboss.security.SimpleGroup")) {
+
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Enumeration<? extends Principal> groupMembers = (Enumeration<? extends Principal>)
+                            Class.forName("org.jboss.security.SimpleGroup")
+                                 .getMethod("members")
+                                 .invoke(principal);
+
+                        for (Principal groupPrincipal : list(groupMembers)) {
+                            groups.add(groupPrincipal.getName());
+                        }
+                    } catch (Exception e) {
+
+                    }
+
+                    // Should only be one group holding the roles, so can exit the loop
+                    // early
+                    return true;
+                }
+            case "org.apache.tomee.catalina.TomcatSecurityService$TomcatUser": // TomEE 2
+                try {
+                    groups.addAll(
+                            asList((String[]) Class.forName("org.apache.catalina.realm.GenericPrincipal")
+                                .getMethod("getRoles")
+                                .invoke(
+                                    Class.forName("org.apache.tomee.catalina.TomcatSecurityService$TomcatUser")
+                                              .getMethod("getTomcatPrincipal")
+                                              .invoke(principal))));
+
+                } catch (Exception e) {
+
+                }
+                break;
+            case "org.apache.catalina.realm.GenericPrincipal": // Tomcat
+                try {
+                    groups.addAll(
+                        asList((String[]) Class.forName("org.apache.catalina.realm.GenericPrincipal")
+                            .getMethod("getRoles")
+                            .invoke(principal)));
+
+                } catch (Exception e) {
+
+                }
+        }
+
         return false;
     }
 
