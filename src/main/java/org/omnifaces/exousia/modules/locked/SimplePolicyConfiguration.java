@@ -759,7 +759,8 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * Evaluates the global policy and returns a PermissionCollection object specifying the set of permissions allowed for
      * code from the specified code source.
      *
-     * @param codeSource the CodeSource associated with the caller. This encapsulates the original location of the code
+     * @param basePerms the collection of permissions to check 
+     * @param codesource the CodeSource associated with the caller. This encapsulates the original location of the code
      * (where the code came from) and the public key(s) of its signer.
      *
      * @return the set of permissions allowed for code from <i>codesource</i> according to the policy.The returned set of
@@ -775,6 +776,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * Evaluates the policy and returns a PermissionCollection object specifying the set of permissions allowed given the
      * characteristics of the protection domain.
      *
+     * @param basePerms the collection of permissions to check 
      * @param domain the ProtectionDomain associated with the caller.
      *
      * @return the set of permissions allowed for the <i>domain</i> according to the policy.The returned set of permissions
@@ -798,9 +800,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * @return integer -1 if excluded, 0 if not implied, 1 if implied granted to this ProtectionDomain.
      *
      */
-    public static int implies(ProtectionDomain domain, Permission p) throws PolicyContextException {
+    public static int implies(ProtectionDomain domain, Permission permission) throws PolicyContextException {
         SimplePolicyConfiguration policyConfiguration = SharedState.getActiveConfig();
-        return policyConfiguration == null ? 0 : policyConfiguration.doImplies(domain, p);
+        return policyConfiguration == null ? 0 : policyConfiguration.doImplies(domain, permission);
     }
 
     
