@@ -16,7 +16,6 @@
 package org.omnifaces.exousia.modules.def;
 import static java.util.Arrays.asList;
 import static java.util.Collections.list;
-import static java.util.logging.Level.SEVERE;
 import static org.omnifaces.exousia.modules.def.DefaultPolicyConfigurationFactory.getCurrentPolicyConfiguration;
 
 import java.security.CodeSource;
@@ -26,16 +25,16 @@ import java.security.Permissions;
 import java.security.Policy;
 import java.security.Principal;
 import java.security.ProtectionDomain;
-import java.security.Security;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
-import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
 
 import org.omnifaces.exousia.spi.PrincipalMapper;
+
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
 
 /**
  * 
@@ -171,16 +170,13 @@ public class DefaultPolicy extends Policy {
     // ### Private methods
     
     private Policy getDefaultPolicy() {
-        String policyClass = Security.getProperty("policy.provider");
-        if (policyClass != null) {
-            try {
-                return (Policy) Class.forName(policyClass).newInstance();
-            } catch (Exception e) {
-                logger.log(SEVERE, "Failed to instantiate " + policyClass, e);
-            }
+        Policy policy = Policy.getPolicy();
+        if (policy instanceof DefaultPolicy) {
+            logger.warning("Cannot obtain default / previous policy.");
+            return null;
         }
-        
-        return null;
+
+        return policy;
     }
 
     private boolean isExcluded(Permissions excludedPermissions, Permission permission) {
