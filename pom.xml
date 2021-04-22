@@ -18,21 +18,25 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>org.eclipse.ee4j</groupId>
+        <artifactId>project</artifactId>
+        <version>1.0.6</version>
+        <relativePath/>
+    </parent>
 
-    <groupId>org.omnifaces</groupId>
+    <groupId>org.glassfish.exousia</groupId>
     <artifactId>exousia</artifactId>
-    <version>1.0-M2</version>
+    <version>1.0-SNAPSHOT</version>
 
     <name>Exousia</name>
     <description>
-    	Exousia is an implementation of the Jakarta Authorization API.
+    	Eclipse (future) compatible implementation of Jakarta Authorization.
     </description>
-    <url>http://omnifaces.org</url>
+    <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
     <inceptionYear>2019</inceptionYear>
-    <organization>
-        <name>OmniFaces</name>
-        <url>http://omnifaces.org</url>
-    </organization>
+ 
     <licenses>
         <license>
             <name>EPL 2.0</name>
@@ -47,19 +51,40 @@
             <name>Arjan Tijms</name>
             <email>arjan.tijms@gmail.com</email>
         </developer>
+        <developer>
+            <id>jakarta-ee4j-exousia</id>
+            <name>Exousia Developers</name>
+            <organization>Eclipse Foundation</organization>
+            <email>exousia-dev@eclipse.org</email>
+        </developer>
     </developers>
+    <contributors>
+       <contributor>
+           <name>Exousia Contributors</name>
+           <email>exousia-dev@eclipse.org</email>
+           <url>https://github.com/eclipse-ee4j/exousia/graphs/contributors</url>
+       </contributor>
+    </contributors>
+    
+    <mailingLists>
+        <mailingList>
+            <name>Jakarta Authorization dev mailing list</name>
+            <post>exousia-dev@eclipse.org</post>
+            <subscribe>https://dev.eclipse.org/mailman/listinfo/exousia-dev</subscribe>
+            <unsubscribe>https://dev.eclipse.org/mailman/listinfo/exousia-dev</unsubscribe>
+            <archive>https://dev.eclipse.org/mhonarc/lists/exousia-dev</archive>
+        </mailingList>
+    </mailingLists>
 
     <scm>
-        <url>https://github.com/omnifaces/Exousia</url>
-        <connection>scm:git:git://github.com/omnifaces/Exousia.git</connection>
-        <developerConnection>scm:git:git@github.com:omnifaces/Exousia.git</developerConnection>
+        <url>scm:git:https://github.com/eclipse-ee4j/exousia.git</url>
+        <connection>scm:git:git://github.com/eclipse-ee4j/exousia.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/eclipse-ee4j/exousia.git</developerConnection>
     </scm>
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/eclipse-ee4j/exousia/issues</url>
+    </issueManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -102,7 +127,29 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.properties</include>
+                    <include>**/*.xml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/..</directory>
+                <includes>
+                    <include>LICENSE.md</include>
+                    <include>NOTICE.md</include>
+                </includes>
+                <targetPath>META-INF</targetPath>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    
         <plugins>
+            <!-- Sets minimal Maven version to 3.5.4 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
@@ -124,24 +171,62 @@
                 </executions>
             </plugin>
             
+            
+            <!-- Creates the OSGi MANIFEST.MF file -->
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>5.1.1</version>
+                <configuration>
+                    <instructions>
+                        <Automatic-Module-Name>org.glassfish.exousia</Automatic-Module-Name>
+                        <Extension-Name>org.glassfish.exousia</Extension-Name>
+                        <Bundle-SymbolicName>org.glassfish.exousia</Bundle-SymbolicName>
+                        <Bundle-Version>${project.version}</Bundle-Version>
+                        <Bundle-Name>Exousia Jakarta Authorization Implementation ${project.version}</Bundle-Name>
+                        <Bundle-Description>Eclipse Jakarta Authorization Implementation (jakarta.authorization/2.0) ${project.version}</Bundle-Description>  
+                        
+                        <Specification-Title>Jakarta Authorization</Specification-Title>
+                        <Specification-Version>2.0</Specification-Version>
+                        <Specification-Vendor>Eclipse Foundation</Specification-Vendor>
+                            
+                        <Implementation-Version>${project.version}</Implementation-Version>
+                        <Implementation-Vendor>Eclipse Foundation</Implementation-Vendor>
+                        
+                        <_include>-osgi.bundle</_include>
+                    </instructions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>bundle-manifest</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>manifest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Adds the manifest file created by the org.apache.felix:maven-bundle-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
                     <archive>
-                        <manifestEntries>
-                            <Automatic-Module-Name>org.omnifaces.exousia</Automatic-Module-Name>
-                        </manifestEntries>
+                        <manifestFile>
+                            ${project.build.outputDirectory}/META-INF/MANIFEST.MF
+                        </manifestFile>
                     </archive>
                 </configuration>
             </plugin>
+           
 
             <!-- Configure the jar with the sources. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -152,23 +237,31 @@
                 </executions>
             </plugin>
             
-            
-             <!-- Configure the jar with the javadoc. -->
+            <!-- Create Javadoc for API jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.2.0</version>
                 <executions>
                     <execution>
-                        <id>attach-api-javadocs</id>
+                        <id>attach-javadocs</id>
                         <goals>
                             <goal>jar</goal>
                         </goals>
                         <configuration>
+                            <source>1.8</source>
                             <additionalJOption>-Xdoclint:none</additionalJOption>
-                            <notimestamp>true</notimestamp>
-                            <splitindex>true</splitindex>
-                            <doctitle>Exousia API documentation</doctitle>
+                            <groups>
+                                <group>
+                                    <title>Exousia ${project.version}</title>
+                                    <packages>org.glassfish.exousia</packages>
+                                </group>
+                            </groups>
+                            <bottom><![CDATA[
+Comments to: <a href="mailto:wasp-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
+Copyright &#169; 2021 Eclipse Foundation. All rights reserved.<br>
+Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
+                            </bottom>
                             <links>
                                 <link>https://jakarta.ee/specifications/platform/9/apidocs/</link>
                             </links>
@@ -177,45 +270,6 @@
                 </executions>
             </plugin>
            
-
-            <!-- Configure snapshot deployment to Sonatype. -->
-            <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.8</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <serverId>ossrh</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
-
-    <!-- Release deploy: mvn clean deploy -P release -->
-    <profiles>
-        <profile>
-            <id>release</id>
-            <build>
-                <plugins>
-                    <!-- Signing with GPG is a requirement for a release deployment to Maven central. -->
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
