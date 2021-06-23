@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2010, 2019 Oracle and/or its affiliates. All rights reserved.
+    Copyright (c) 2010, 2021 Oracle and/or its affiliates. All rights reserved.
 
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License v. 2.0, which is available at
@@ -27,12 +27,13 @@
     </parent>
 
     <groupId>org.glassfish.exousia</groupId>
-    <artifactId>exousia</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <artifactId>parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
 
-    <name>Exousia</name>
+    <name>Exousia Parent</name>
     <description>
-    	Eclipse (future) compatible implementation of Jakarta Authorization.
+    	Eclipse compatible implementation of Jakarta Authorization - Parent.
     </description>
     <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
     <inceptionYear>2019</inceptionYear>
@@ -89,65 +90,14 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
     </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <version>5.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.authorization</groupId>
-            <artifactId>jakarta.authorization-api</artifactId>
-            <version>2.0.0</version>
-        </dependency>
-        
-        <!-- Integration -->
-        
-        <dependency>
-            <groupId>org.apache.tomcat</groupId>
-            <artifactId>tomcat-catalina</artifactId>
-            <version>10.0.0</version>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        
-        <!-- Tests -->
-        
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    
+    <modules>
+        <module>impl</module>
+        <module>spi</module>
+    </modules>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/java</directory>
-                <includes>
-                    <include>**/*.properties</include>
-                    <include>**/*.xml</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>${project.basedir}/..</directory>
-                <includes>
-                    <include>LICENSE.md</include>
-                    <include>NOTICE.md</include>
-                </includes>
-                <targetPath>META-INF</targetPath>
-            </resource>
-            <resource>
-                <directory>src/main/resources</directory>
-            </resource>
-        </resources>
-    
         <plugins>
             <!-- Sets minimal Maven version to 3.5.4 -->
             <plugin>
@@ -170,106 +120,6 @@
                     </execution>
                 </executions>
             </plugin>
-            
-            
-            <!-- Creates the OSGi MANIFEST.MF file -->
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <version>5.1.1</version>
-                <configuration>
-                    <instructions>
-                        <Automatic-Module-Name>org.glassfish.exousia</Automatic-Module-Name>
-                        <Extension-Name>org.glassfish.exousia</Extension-Name>
-                        <Bundle-SymbolicName>org.glassfish.exousia</Bundle-SymbolicName>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Name>Exousia Jakarta Authorization Implementation ${project.version}</Bundle-Name>
-                        <Bundle-Description>Eclipse Jakarta Authorization Implementation (jakarta.authorization/2.0) ${project.version}</Bundle-Description>  
-                        
-                        <Specification-Title>Jakarta Authorization</Specification-Title>
-                        <Specification-Version>2.0</Specification-Version>
-                        <Specification-Vendor>Eclipse Foundation</Specification-Vendor>
-                            
-                        <Implementation-Version>${project.version}</Implementation-Version>
-                        <Implementation-Vendor>Eclipse Foundation</Implementation-Vendor>
-                        
-                        <_include>-osgi.bundle</_include>
-                    </instructions>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>bundle-manifest</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>manifest</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            
-            <!-- Adds the manifest file created by the org.apache.felix:maven-bundle-plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.0</version>
-                <configuration>
-                    <archive>
-                        <manifestFile>
-                            ${project.build.outputDirectory}/META-INF/MANIFEST.MF
-                        </manifestFile>
-                    </archive>
-                </configuration>
-            </plugin>
-           
-
-            <!-- Configure the jar with the sources. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.1</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            
-            <!-- Create Javadoc for API jar -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.2.0</version>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                        <configuration>
-                            <source>1.8</source>
-                            <additionalJOption>-Xdoclint:none</additionalJOption>
-                            <groups>
-                                <group>
-                                    <title>Exousia ${project.version}</title>
-                                    <packages>org.glassfish.exousia</packages>
-                                </group>
-                            </groups>
-                            <bottom><![CDATA[
-Comments to: <a href="mailto:wasp-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
-Copyright &#169; 2021 Eclipse Foundation. All rights reserved.<br>
-Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
-                            </bottom>
-                            <links>
-                                <link>https://jakarta.ee/specifications/platform/9/apidocs/</link>
-                            </links>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-           
-        </plugins>
+         </plugins>
     </build>
 </project>

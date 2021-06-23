@@ -13,11 +13,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
-package org.glassfish.exousia.spi.integration;
+package org.glassfish.exousia.spi.tomcat;
 
 import java.util.Set;
-
-import org.glassfish.exousia.spi.integration.tomcat.TomcatAuthorizationFilter;
 
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
@@ -25,17 +23,12 @@ import jakarta.servlet.ServletException;
 
 /**
 * This initializer installs a container specific integration between Exousia
-* and that container.
-*
-* <p>
-* Note, currently uses hardcoded references to containers. May be replaced
-* by a service loader based mechanism later, or maybe such mechanism will
-* be in addition to the build-in ones.
+* and Tomcat.
 *
 * @author Arjan Tijms
 *
 */
-public class IntegrationInitializer implements ServletContainerInitializer {
+public class TomcatIntegrationInitializer implements ServletContainerInitializer {
 
     @Override
     public void onStartup(Set<Class<?>> c, ServletContext ctx) throws ServletException {
