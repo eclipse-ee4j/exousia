@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 OmniFaces. All rights reserved.
+ * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -28,42 +28,58 @@ import jakarta.security.jacc.PolicyContextException;
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactory {
+public class DefaultPolicyConfigurationFactory
+    extends PolicyConfigurationFactory {
 
-    private static final ConcurrentMap<String, DefaultPolicyConfigurationStateMachine> configurators = new ConcurrentHashMap<>();
+    private static final
+    ConcurrentMap<String, DefaultPolicyConfigurationStateMachine>
+        configurators = new ConcurrentHashMap<>();
 
     @Override
-    public PolicyConfiguration getPolicyConfiguration(String contextID, boolean remove) throws PolicyContextException {
+    public PolicyConfiguration getPolicyConfiguration(
+        String contextID,
+        boolean remove)
+        throws PolicyContextException {
 
-        if (!configurators.containsKey(contextID)) {
-            configurators.putIfAbsent(contextID, new DefaultPolicyConfigurationStateMachine(new DefaultPolicyConfiguration(contextID)));
-        }
-
-        DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
+        DefaultPolicyConfigurationStateMachine
+            defaultPolicyConfigurationStateMachine =
+            configurators.computeIfAbsent(contextID,
+                contextId -> new DefaultPolicyConfigurationStateMachine(
+                    new DefaultPolicyConfiguration(
+                        contextID)));
 
         if (remove) {
-            defaultPolicyConfigurationStateMachine.delete();
+            defaultPolicyConfigurationStateMachine
+                .delete();
         }
 
-        // According to the contract of getPolicyConfiguration() every PolicyConfiguration returned from here
-        // should always be transitioned to the OPEN state.
-        defaultPolicyConfigurationStateMachine.open();
+        defaultPolicyConfigurationStateMachine
+            .open();
 
-        return defaultPolicyConfigurationStateMachine;
+        return
+            defaultPolicyConfigurationStateMachine;
     }
 
     @Override
-    public boolean inService(String contextID) throws PolicyContextException {
-        DefaultPolicyConfigurationStateMachine defaultPolicyConfigurationStateMachine = configurators.get(contextID);
+    public boolean inService(
+        String contextID)
+        throws PolicyContextException {
+        DefaultPolicyConfigurationStateMachine
+            defaultPolicyConfigurationStateMachine =
+            configurators.get(contextID);
+
         if (defaultPolicyConfigurationStateMachine == null) {
             return false;
         }
 
-        return defaultPolicyConfigurationStateMachine.inService();
+        return defaultPolicyConfigurationStateMachine
+            .inService();
     }
 
     public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
-        return (DefaultPolicyConfiguration) configurators.get(getContextID()).getPolicyConfiguration();
+        return (DefaultPolicyConfiguration) configurators
+            .get(getContextID())
+            .getPolicyConfiguration();
     }
 
 }
