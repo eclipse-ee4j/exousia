@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 OmniFaces. All rights reserved.
+ * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -17,33 +17,39 @@
 package org.glassfish.exousia;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.SEVERE;
 import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
 import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
 
+import java.lang.reflect.Method;
+import java.security.AccessController;
 import java.security.CodeSource;
 import java.security.Permission;
 import java.security.Permissions;
 import java.security.Policy;
 import java.security.Principal;
+import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
 
 import org.glassfish.exousia.constraints.SecurityConstraint;
-import org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer;
 import org.glassfish.exousia.mapping.SecurityRoleRef;
 import org.glassfish.exousia.modules.def.DefaultPolicy;
 import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
 import org.glassfish.exousia.permissions.JakartaPermissions;
 import org.glassfish.exousia.spi.PrincipalMapper;
 
+import jakarta.security.jacc.EJBMethodPermission;
+import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
 import jakarta.security.jacc.PolicyContext;
@@ -60,14 +66,21 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 public class AuthorizationService {
 
-    static final Logger logger = Logger.getLogger(ConstraintsToPermissionsTransformer.class.getName());
+    static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
+
+    private static boolean isSecMgrOff = System.getSecurityManager() == null;
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
     public static final String FACTORY = "jakarta.security.jacc.PolicyConfigurationFactory.provider";
+    public static final String ENTERPRISE_BEAN = "jakarta.ejb.EnterpriseBean";
+    public static final String ENTERPRISE_BEAN_ARGUMENTS = "jakarta.ejb.arguments";
+
     public static final String PRINCIPAL_MAPPER = "jakarta.authorization.PrincipalMapper.provider";
 
     private final String contextId;
+
+    private Function<Set<Principal>, ProtectionDomain> protectionDomainCreator = e -> newProtectionDomain(e);
 
     /**
      * The authorization policy. This is the class that makes the actual decision for a permission
@@ -84,56 +97,48 @@ public class AuthorizationService {
 
     public AuthorizationService(
             ServletContext servletContext,
-            Supplier<HttpServletRequest> requestSupplier,
             Supplier<Subject> subjectSupplier) {
         this(
             DefaultPolicyConfigurationFactory.class,
             DefaultPolicy.class,
-            getServletContextId(servletContext), requestSupplier, subjectSupplier);
+            getServletContextId(servletContext), subjectSupplier);
     }
 
     public AuthorizationService(
             String contextId,
-            Supplier<HttpServletRequest> requestSupplier,
             Supplier<Subject> subjectSupplier) {
         this(
             DefaultPolicyConfigurationFactory.class,
             DefaultPolicy.class,
-            contextId, requestSupplier, subjectSupplier);
+            contextId, subjectSupplier);
     }
 
     public AuthorizationService(
             Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
-            Supplier<HttpServletRequest> requestSupplier,
             Supplier<Subject> subjectSupplier) {
-        this(factoryClass, policyClass, contextId, requestSupplier, subjectSupplier, null);
+        this(factoryClass, policyClass, contextId, subjectSupplier, null);
     }
 
     public AuthorizationService(
             Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
-            Supplier<HttpServletRequest> requestSupplier,
             Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
 
         this(
             installFactory(factoryClass), installPolicy(policyClass), contextId,
-            requestSupplier,
             subjectSupplier, principalMapper);
     }
 
     public AuthorizationService(
         String contextId,
-        Supplier<HttpServletRequest> requestSupplier,
         Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
 
     this(
         getFactory(), getPolicy(), contextId,
-        requestSupplier,
         subjectSupplier, principalMapper);
 }
 
     public AuthorizationService(
         PolicyConfigurationFactory factory, Policy policy, String contextId,
-        Supplier<HttpServletRequest> requestSupplier,
         Supplier<Subject> subjectSupplier, PrincipalMapper principalMapper) {
         try {
             this.factory = factory;
@@ -145,12 +150,6 @@ public class AuthorizationService {
             // Sets the context Id (aka application Id), which may be used by authorization modules to get the right
             // authorization config
             PolicyContext.setContextID(contextId);
-
-            // Sets the handlers (aka suppliers) for the request and subject for the current thread
-            PolicyContext.registerHandler(
-                HTTP_SERVLET_REQUEST,
-                new DefaultPolicyContextHandler(HTTP_SERVLET_REQUEST, requestSupplier),
-                true);
 
             PolicyContext.registerHandler(
                 SUBJECT,
@@ -165,6 +164,53 @@ public class AuthorizationService {
         } catch (PolicyContextException | IllegalArgumentException | SecurityException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public void setRequestSupplier(Supplier<HttpServletRequest> requestSupplier) {
+        try {
+            PolicyContext.registerHandler(
+                HTTP_SERVLET_REQUEST,
+                new DefaultPolicyContextHandler(HTTP_SERVLET_REQUEST, requestSupplier),
+                true);
+        } catch (PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public void setSubjectSupplier(Supplier<Subject> subjectSupplier) {
+        try {
+            PolicyContext.registerHandler(
+                SUBJECT,
+                new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
+                true);
+        } catch (PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public void setEnterpriseBeanSupplier(Supplier<Object> beanSupplier) {
+        try {
+            PolicyContext.registerHandler(
+                ENTERPRISE_BEAN,
+                new DefaultPolicyContextHandler(ENTERPRISE_BEAN, beanSupplier),
+                true);
+        } catch (PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * @return the protectionDomainCreator
+     */
+    public Function<Set<Principal>, ProtectionDomain> getProtectionDomainCreator() {
+        return protectionDomainCreator;
+    }
+
+    /**
+     * @param protectionDomainCreator the protectionDomainCreator to set
+     */
+    public void setProtectionDomainCreator(Function<Set<Principal>, ProtectionDomain> protectionDomainCreator) {
+        this.protectionDomainCreator = protectionDomainCreator;
     }
 
     /**
@@ -183,8 +229,19 @@ public class AuthorizationService {
 
     public void addConstraintsToPolicy(List<SecurityConstraint> securityConstraints, Set<String> declaredRoles, boolean isDenyUncoveredHttpMethods, Map<String, List<SecurityRoleRef>> servletRoleMappings) {
         try {
-            JakartaPermissions jakartaPermissions = createResourceAndDataPermissions(declaredRoles, isDenyUncoveredHttpMethods, securityConstraints);
+            JakartaPermissions jakartaResourceDataPermissions = createResourceAndDataPermissions(declaredRoles, isDenyUncoveredHttpMethods, securityConstraints);
+            addPermissionsToPolicy(jakartaResourceDataPermissions);
 
+            JakartaPermissions jakartaRoleRefPermissions = createWebRoleRefPermission(declaredRoles, servletRoleMappings);
+            addPermissionsToPolicy(jakartaRoleRefPermissions);
+
+        } catch (PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public void addPermissionsToPolicy(JakartaPermissions jakartaPermissions) {
+        try {
             // Add the translated/generated excluded permissions
             policyConfiguration.addToExcludedPolicy(jakartaPermissions.getExcluded());
 
@@ -196,17 +253,9 @@ public class AuthorizationService {
                 policyConfiguration.addToRole(roleEntry.getKey(), roleEntry.getValue());
             }
 
-            Map<String, Permissions> roleRefPermissions = createWebRoleRefPermission(declaredRoles, servletRoleMappings);
-
-            // Add the translated/generated per role role-ref permissions
-            for (Entry<String, Permissions> roleEntry : roleRefPermissions.entrySet()) {
-                policyConfiguration.addToRole(roleEntry.getKey(), roleEntry.getValue());
-            }
-
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
-
     }
 
     public void removeStatementsFromPolicy(Set<String> declaredRoles) {
@@ -424,6 +473,38 @@ public class AuthorizationService {
                 principals);
     }
 
+    public boolean checkBeanRoleRefPermission(String beanName, String role, Set<Principal> principals) {
+        EJBRoleRefPermission ejbRoleRefPermission = new EJBRoleRefPermission(beanName, role);
+
+        boolean isCallerInRole = checkPermissionScoped(ejbRoleRefPermission, principals);
+
+            logger.fine(() ->
+                "Authorization: checkBeanRoleRefPermission Result: " + isCallerInRole +
+                " EJBRoleRefPermission (Name) = " + ejbRoleRefPermission.getName() +
+                " (Action) = " + ejbRoleRefPermission.getActions() +
+                " (Codesource) = " + protectionDomainCreator.apply(principals).getCodeSource());
+
+        return isCallerInRole;
+    }
+
+    public boolean checkBeanMethodPermission(String beanName, String methodInterface, Method method, Set<Principal> principals) {
+        EJBMethodPermission methodPermission = new EJBMethodPermission(beanName, methodInterface, method);
+
+        boolean authorized = checkPermissionScoped(methodPermission, principals);
+
+        logger.fine(() ->
+            "Authorization: Access Control Decision Result: " + authorized +
+            " EJBMethodPermission (Name) = " + methodPermission.getName() +
+            " (Action) = " + methodPermission.getActions());
+
+       return authorized;
+    }
+
+    public Object invokeBeanMethod(Object bean, Method beanClassMethod, Object[] methodParameters) throws Throwable {
+        return runInScope(() -> beanClassMethod.invoke(bean, methodParameters));
+    }
+
+
     /**
      * Inform the policy module to take the named policy context out of service. The policy context is transitioned to the
      * deleted state.
@@ -474,6 +555,34 @@ public class AuthorizationService {
 
     boolean checkPermission(Permission permissionToBeChecked, Set<Principal> principals) {
         return policy.implies(newProtectionDomain(principals), permissionToBeChecked);
+    }
+
+    boolean checkPermissionScoped(Permission permissionToBeChecked, Set<Principal> principals) {
+        String oldContextId = null;
+        try {
+            oldContextId = setThreadContextId(contextId);
+
+            return policy.implies(protectionDomainCreator.apply(principals), permissionToBeChecked);
+        } catch (Throwable t) {
+            logger.log(SEVERE, "jacc_is_caller_in_role_exception", t);
+        } finally {
+            try {
+                resetPolicyContext(oldContextId, contextId);
+            } catch (Throwable ex) {
+                logger.log(SEVERE, "jacc_policy_context_exception", ex);
+            }
+        }
+
+        return false;
+    }
+
+    public Object runInScope(ThrowableSupplier<Object> supplier) throws Throwable {
+        String oldContextId = setThreadContextId(contextId);
+        try {
+            return supplier.get();
+        } finally {
+            resetPolicyContext(oldContextId, contextId);
+        }
     }
 
     private static PolicyConfigurationFactory installFactory(Class<?> factoryClass) {
@@ -540,8 +649,42 @@ public class AuthorizationService {
         PolicyContext.setContextID(getServletContextId(context));
     }
 
-    public static void setThreadContextId(String contextId) {
+    public static String setThreadContextId(String contextId) {
+        String oldContextId = PolicyContext.getContextID();
+
         PolicyContext.setContextID(contextId);
+
+        return oldContextId;
+    }
+
+    private static void resetPolicyContext(String newContextId, String oldContextId) throws Throwable {
+        if (newContextId != null && (oldContextId == null || !oldContextId.equals(newContextId))) {
+
+            logger.fine(() -> "Authorization: Changing Policy Context ID: oldContextId = " + oldContextId + " newContextId = " + newContextId);
+
+            doPrivileged(() -> PolicyContext.setContextID(newContextId));
+        }
+    }
+
+    public static void doPrivileged(PrivilegedExceptionRunnable runnable) throws Exception {
+        if (isSecMgrOff) {
+            runnable.run();
+        }
+
+        AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+            runnable.run();
+            return null;
+        });
+    }
+
+    @FunctionalInterface
+    private static interface PrivilegedExceptionRunnable {
+        void run() throws Exception;
+    }
+
+    @FunctionalInterface
+    public static interface ThrowableSupplier<T> {
+        T get() throws Throwable;
     }
 
 }

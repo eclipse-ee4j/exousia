@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 OmniFaces. All rights reserved.
+ * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -23,28 +23,37 @@ import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
 /**
- * 
+ *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfiguration extends DefaultPolicyConfigurationPermissions {
- 
-    public DefaultPolicyConfiguration(String contextID) {
+public class DefaultPolicyConfiguration
+    extends
+    DefaultPolicyConfigurationPermissions {
+
+    public DefaultPolicyConfiguration(
+        String contextID) {
         super(contextID);
     }
-     
+
     private PrincipalMapper roleMapper;
- 
+
     @Override
-    public void commit() throws PolicyContextException {
-        
-        roleMapper =  (PrincipalMapper) PolicyContext.getContext(PRINCIPAL_MAPPER);
+    public void commit()
+        throws PolicyContextException {
+
+        roleMapper = (PrincipalMapper) PolicyContext
+            .getContext(
+                PRINCIPAL_MAPPER);
         if (roleMapper == null) {
-            roleMapper = new DefaultRoleMapper(getContextID(), getPerRolePermissions().keySet());
+            roleMapper = new DefaultRoleMapper(
+                getContextID(),
+                getPerRolePermissions()
+                    .keySet());
         }
     }
-     
+
     public PrincipalMapper getRoleMapper() {
         return roleMapper;
     }
- 
+
 }

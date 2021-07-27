@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 OmniFaces. All rights reserved.
+ * Copyright (c) 2020, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -18,7 +18,7 @@ package org.glassfish.exousia.mapping;
 public class SecurityRoleRef {
 
     /**
-     * The role scoped to a specific servlet, and the role uses in <code>isUser/CallerInRole</code> methods.
+     * The role scoped to a specific servlet, and the role used in <code>isUser/CallerInRole</code> methods.
      */
     private final String roleName;
 

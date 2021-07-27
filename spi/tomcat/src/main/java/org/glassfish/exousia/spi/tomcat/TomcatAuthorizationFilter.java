@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 OmniFaces. All rights reserved.
+ * Copyright (c) 2020, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -75,8 +75,9 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         // It specifically tells Jakarta Authorization how to get the current request, and the current subject
         AuthorizationService authorizationService = new AuthorizationService(
             servletContext,
-            () -> localServletRequest.get(),
             () -> getSubject(localServletRequest.get()));
+
+        authorizationService.setRequestSupplier(() -> localServletRequest.get());
 
         // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
         // repository as well. That way Jakarta Authorization can work with the same data as Tomcat

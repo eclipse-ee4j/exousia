@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 OmniFaces. All rights reserved.
+ * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -23,155 +23,204 @@ import java.security.Permission;
 import java.security.PermissionCollection;
 
 import jakarta.security.jacc.PolicyConfiguration;
-import jakarta.security.jacc.PolicyConfigurationFactory;
 import jakarta.security.jacc.PolicyContextException;
 
 /**
- * 
+ *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfigurationStateMachine implements PolicyConfiguration {
- 
+public class DefaultPolicyConfigurationStateMachine
+    implements PolicyConfiguration {
+
     public static enum State {
         OPEN, INSERVICE, DELETED
     };
- 
+
     private State state = OPEN;
     private PolicyConfiguration policyConfiguration;
-     
- 
-    public DefaultPolicyConfigurationStateMachine(PolicyConfiguration policyConfiguration) {
+
+    public DefaultPolicyConfigurationStateMachine(
+        PolicyConfiguration policyConfiguration) {
         this.policyConfiguration = policyConfiguration;
     }
-     
+
     public PolicyConfiguration getPolicyConfiguration() {
         return policyConfiguration;
     }
- 
-     
-    // ### Methods that can be called in any state and don't change state
-     
+
+    // ### Methods that can be called in any state
+    // and don't change state
+
     @Override
-    public String getContextID() throws PolicyContextException {
-        return policyConfiguration.getContextID();
+    public String getContextID()
+        throws PolicyContextException {
+        return policyConfiguration
+            .getContextID();
     }
-     
+
     @Override
-    public boolean inService() throws PolicyContextException {
+    public boolean inService()
+        throws PolicyContextException {
         return state == INSERVICE;
     }
-     
-     
-    // ### Methods where state should be OPEN and don't change state
-     
+
+    // ### Methods where state should be OPEN
+    // and don't change state
+
     @Override
-    public void addToExcludedPolicy(Permission permission) throws PolicyContextException {
+    public void addToExcludedPolicy(
+        Permission permission)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.addToExcludedPolicy(permission);
+        policyConfiguration
+            .addToExcludedPolicy(
+                permission);
     }
- 
+
     @Override
-    public void addToUncheckedPolicy(Permission permission) throws PolicyContextException {
+    public void addToUncheckedPolicy(
+        Permission permission)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.addToUncheckedPolicy(permission);
+        policyConfiguration
+            .addToUncheckedPolicy(
+                permission);
     }
- 
+
     @Override
-    public void addToRole(String roleName, Permission permission) throws PolicyContextException {
+    public void addToRole(
+        String roleName,
+        Permission permission)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.addToRole(roleName, permission);
+        policyConfiguration.addToRole(
+            roleName, permission);
     }
-     
+
     @Override
-    public void addToExcludedPolicy(PermissionCollection permissions) throws PolicyContextException {
+    public void addToExcludedPolicy(
+        PermissionCollection permissions)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.addToExcludedPolicy(permissions);
+        policyConfiguration
+            .addToExcludedPolicy(
+                permissions);
     }
-     
+
     @Override
-    public void addToUncheckedPolicy(PermissionCollection permissions) throws PolicyContextException {
+    public void addToUncheckedPolicy(
+        PermissionCollection permissions)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.addToUncheckedPolicy(permissions);
+        policyConfiguration
+            .addToUncheckedPolicy(
+                permissions);
     }
-     
+
     @Override
-    public void addToRole(String roleName, PermissionCollection permissions) throws PolicyContextException {
+    public void addToRole(
+        String roleName,
+        PermissionCollection permissions)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.addToRole(roleName, permissions);
+        policyConfiguration.addToRole(
+            roleName, permissions);
     }
-     
+
     @Override
-    public void linkConfiguration(PolicyConfiguration link) throws PolicyContextException {
+    public void linkConfiguration(
+        PolicyConfiguration link)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.linkConfiguration(link);
+        policyConfiguration
+            .linkConfiguration(link);
     }
-     
+
     @Override
-    public void removeExcludedPolicy() throws PolicyContextException {
+    public void removeExcludedPolicy()
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.removeExcludedPolicy();
-         
+        policyConfiguration
+            .removeExcludedPolicy();
+
     }
- 
+
     @Override
-    public void removeRole(String roleName) throws PolicyContextException {
+    public void removeRole(
+        String roleName)
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.removeRole(roleName);
+        policyConfiguration
+            .removeRole(roleName);
     }
- 
+
     @Override
-    public void removeUncheckedPolicy() throws PolicyContextException {
+    public void removeUncheckedPolicy()
+        throws PolicyContextException {
         checkStateIs(OPEN);
-        policyConfiguration.removeUncheckedPolicy();
+        policyConfiguration
+            .removeUncheckedPolicy();
     }
-     
-     
+
     // Methods that change the state
     //
-    // commit() can only be called when the state is OPEN or INSERVICE and next state is always INSERVICE
-    // delete() can always be called and target state will always be DELETED
-    // open()   can always be called and target state will always be OPEN
-     
+    // commit() can only be called when
+    // the state is OPEN or INSERVICE
+    // and next state is always INSERVICE
+    //
+    // delete() can always be called and
+    // target state will always be DELETED
+    //
+    // open() can always be called and
+    // target state will always be OPEN
+
     @Override
-    public void commit() throws PolicyContextException {
+    public void commit()
+        throws PolicyContextException {
         checkStateIsNot(DELETED);
-         
+
         if (state == OPEN) {
-            // Not 100% sure; allow double commit, or ignore double commit?
-            // Here we ignore and only call commit on the actual policyConfiguration
-            // when the state is OPEN
-            policyConfiguration.commit();
+            policyConfiguration
+                .commit();
             state = INSERVICE;
         }
     }
- 
+
     @Override
-    public void delete() throws PolicyContextException {
+    public void delete()
+        throws PolicyContextException {
         policyConfiguration.delete();
         state = DELETED;
     }
-     
+
     /**
-     * Transition back to open. This method is required because of the {@link PolicyConfigurationFactory} contract, but is
-     * mysteriously missing from the interface.
+     * Transition back to open.
      */
     public void open() {
         state = OPEN;
     }
-     
-     
+
     // ### Private methods
-     
-    private void checkStateIs(State requiredState) {
+
+    private void checkStateIs(
+        State requiredState) {
         if (state != requiredState) {
-            throw new IllegalStateException("Required status is " + requiredState + " but actual state is " + state);
+            throw new IllegalStateException(
+                "Required status is "
+                    + requiredState
+                    + " but actual state is "
+                    + state);
         }
     }
-     
-    private void checkStateIsNot(State undesiredState) {
+
+    private void checkStateIsNot(
+        State undesiredState) {
         if (state == undesiredState) {
-            throw new IllegalStateException("State could not be " + undesiredState + " but actual state is");
+            throw new IllegalStateException(
+                "State could not be "
+                    + undesiredState
+                    + " but actual state is");
         }
     }
- 
+
 }
