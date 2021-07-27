@@ -292,12 +292,8 @@ public class AuthorizationService {
      * This method obtains the policy configuration object corresponding to the name, and links it, for roleMapping purposes
      * to another. If the policy configuration is already InService when this method is called, this method does nothing.
      *
-     * @param String contextId - the module id which serves to identify the corresponding policy context. The name shall not be
-     * null.
-     * @param String linkedContextId - the module id of the module being linked to this context. This value may be null, in which
+     * @param linkedContextId - the module id of the module being linked to this context. This value may be null, in which
      * case, no link is done, but the inService state of the named PC is returned.
-     * @param boolean lastInService - the inService state returned by the previous call to this method. The value of this
-     * argument is only significant when linkName is not null.
      *
      * @return boolean if linkedContextId is null, returns the inService state of the policy configuration identified in the contextId
      * argument. Otherwise returns the value passed to lastInService.
@@ -509,8 +505,6 @@ public class AuthorizationService {
      * Inform the policy module to take the named policy context out of service. The policy context is transitioned to the
      * deleted state.
      *
-     * @param contextId the module id which serves to identify the corresponding policy context. The name shall not be
-     * null.
      */
     public void deletePolicy() {
         try {
