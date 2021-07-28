@@ -18,7 +18,7 @@
 
     <groupId>org.glassfish.exousia</groupId>
     <artifactId>exousia.spi.tomcat</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0-M2</version>
 
     <name>Exousia Tomcat Integration</name>
     <description>
@@ -101,7 +101,7 @@
         <dependency>
             <groupId>org.glassfish.exousia</groupId>
             <artifactId>exousia</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0.0-M2</version>
         </dependency>
 
         <dependency>
