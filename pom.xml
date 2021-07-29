@@ -28,7 +28,7 @@
 
     <groupId>org.glassfish.exousia</groupId>
     <artifactId>parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0-M3</version>
     <packaging>pom</packaging>
 
     <name>Exousia Parent</name>
