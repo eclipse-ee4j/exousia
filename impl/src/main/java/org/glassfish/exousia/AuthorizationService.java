@@ -28,6 +28,7 @@ import java.security.Permission;
 import java.security.Permissions;
 import java.security.Policy;
 import java.security.Principal;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
@@ -561,7 +562,7 @@ public class AuthorizationService {
             logger.log(SEVERE, "jacc_is_caller_in_role_exception", t);
         } finally {
             try {
-                resetPolicyContext(oldContextId, contextId);
+                setPolicyContextChecked(oldContextId, contextId);
             } catch (Throwable ex) {
                 logger.log(SEVERE, "jacc_policy_context_exception", ex);
             }
@@ -575,7 +576,7 @@ public class AuthorizationService {
         try {
             return supplier.get();
         } finally {
-            resetPolicyContext(oldContextId, contextId);
+            setPolicyContextChecked(oldContextId, contextId);
         }
     }
 
@@ -646,17 +647,24 @@ public class AuthorizationService {
     public static String setThreadContextId(String contextId) {
         String oldContextId = PolicyContext.getContextID();
 
-        PolicyContext.setContextID(contextId);
+        setPolicyContextChecked(contextId, oldContextId);
 
         return oldContextId;
     }
 
-    private static void resetPolicyContext(String newContextId, String oldContextId) throws Throwable {
+    private static void setPolicyContextChecked(String newContextId, String oldContextId) {
         if (newContextId != null && (oldContextId == null || !oldContextId.equals(newContextId))) {
 
             logger.fine(() -> "Authorization: Changing Policy Context ID: oldContextId = " + oldContextId + " newContextId = " + newContextId);
 
-            doPrivileged(() -> PolicyContext.setContextID(newContextId));
+            try {
+                doPrivileged(() -> PolicyContext.setContextID(newContextId));
+            } catch (Exception e) {
+                if (e instanceof PrivilegedActionException) {
+                    throw new IllegalStateException(e.getCause());
+                }
+                throw new IllegalStateException(e);
+            }
         }
     }
 
@@ -673,7 +681,7 @@ public class AuthorizationService {
 
     @FunctionalInterface
     private static interface PrivilegedExceptionRunnable {
-        void run() throws Exception;
+        void run() throws PrivilegedActionException;
     }
 
     @FunctionalInterface
