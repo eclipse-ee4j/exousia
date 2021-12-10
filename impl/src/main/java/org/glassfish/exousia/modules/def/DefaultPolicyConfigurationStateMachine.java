@@ -21,6 +21,7 @@ import static org.glassfish.exousia.modules.def.DefaultPolicyConfigurationStateM
 
 import java.security.Permission;
 import java.security.PermissionCollection;
+import java.util.Map;
 
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyContextException;
@@ -192,6 +193,21 @@ public class DefaultPolicyConfigurationStateMachine
         policyConfiguration.delete();
         state = DELETED;
     }
+    
+    @Override
+    public Map<String, PermissionCollection> getPerRolePermissions() {
+        return policyConfiguration.getPerRolePermissions();
+    }
+
+    @Override
+    public PermissionCollection getUncheckedPermissions() {
+        return policyConfiguration.getUncheckedPermissions();
+    }
+
+    @Override
+    public PermissionCollection getExcludedPermissions() {
+        return policyConfiguration.getExcludedPermissions();
+    }
 
     /**
      * Transition back to open.
@@ -199,6 +215,7 @@ public class DefaultPolicyConfigurationStateMachine
     public void open() {
         state = OPEN;
     }
+    
 
     // ### Private methods
 

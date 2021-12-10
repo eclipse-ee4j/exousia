@@ -16,6 +16,7 @@
 package org.glassfish.exousia.modules.def;
 
 import java.security.Permission;
+import java.security.PermissionCollection;
 import java.security.Permissions;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,7 @@ public abstract class DefaultPolicyConfigurationPermissions
         new Permissions();
     private Permissions uncheckedPermissions =
         new Permissions();
-    private Map<String, Permissions> perRolePermissions =
+    private Map<String, PermissionCollection> perRolePermissions =
         new HashMap<>();
 
     public DefaultPolicyConfigurationPermissions(
@@ -63,7 +64,7 @@ public abstract class DefaultPolicyConfigurationPermissions
         String roleName,
         Permission permission)
         throws PolicyContextException {
-        Permissions permissions = perRolePermissions
+        PermissionCollection permissions = perRolePermissions
             .get(roleName);
         if (permissions == null) {
             permissions = new Permissions();
@@ -108,15 +109,15 @@ public abstract class DefaultPolicyConfigurationPermissions
         uncheckedPermissions = new Permissions();
     }
 
-    public Permissions getExcludedPermissions() {
+    public PermissionCollection getExcludedPermissions() {
         return excludedPermissions;
     }
 
-    public Permissions getUncheckedPermissions() {
+    public PermissionCollection getUncheckedPermissions() {
         return uncheckedPermissions;
     }
 
-    public Map<String, Permissions> getPerRolePermissions() {
+    public Map<String, PermissionCollection> getPerRolePermissions() {
         return perRolePermissions;
     }
 

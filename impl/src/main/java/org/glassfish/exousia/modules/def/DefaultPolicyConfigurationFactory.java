@@ -76,10 +76,21 @@ public class DefaultPolicyConfigurationFactory
             .inService();
     }
 
-    public static DefaultPolicyConfiguration getCurrentPolicyConfiguration() {
+    @Override
+    public PolicyConfiguration getPolicyConfiguration(String contextID) {
         return (DefaultPolicyConfiguration) configurators
-            .get(getContextID())
-            .getPolicyConfiguration();
+                .get(contextID)
+                .getPolicyConfiguration();
+    }
+
+    @Override
+    public PolicyConfiguration getPolicyConfiguration() {
+        String contextId = getContextID();
+        if (contextId == null) {
+            return null;
+        }
+        
+        return getPolicyConfiguration(contextId);
     }
 
 }
