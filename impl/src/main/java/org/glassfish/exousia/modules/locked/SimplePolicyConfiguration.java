@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2021 Contributors to Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -33,6 +34,7 @@ import java.security.SecurityPermission;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
@@ -607,6 +609,31 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             readLock.unlock();
         }
     }
+    
+    @Override
+    public Map<String, PermissionCollection> getPerRolePermissions() {
+        // TODO IMPLEMENT!
+        return null;
+    }
+    
+    @Override
+    public PermissionCollection getUncheckedPermissions() {
+        if (uncheckedPermissions == null) {
+            uncheckedPermissions = new Permissions();
+        }
+        
+        return uncheckedPermissions;
+    }
+    
+    @Override
+    public PermissionCollection getExcludedPermissions() {
+        if (excludedPermissions == null) {
+            excludedPermissions = new Permissions();
+        }
+        
+        return excludedPermissions;
+    }
+    
 
     // Internal Policy Configuration interfaces start here
     protected static SimplePolicyConfiguration getPolicyConfig(String pcid, boolean remove) throws PolicyContextException {
@@ -626,12 +653,16 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     }
 
     protected static boolean inService(String pcid) throws PolicyContextException {
-        SimplePolicyConfiguration simplePolicyConfiguration = SharedState.lookupConfig(pcid);
+        SimplePolicyConfiguration simplePolicyConfiguration = getPolicyConfig(pcid);
         if (simplePolicyConfiguration == null) {
             return false;
         }
         
         return simplePolicyConfiguration.inService();
+    }
+    
+    protected static SimplePolicyConfiguration getPolicyConfig(String pcid) {
+        return SharedState.lookupConfig(pcid);
     }
 
     protected static void checkSetPolicyPermission() {
@@ -660,22 +691,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         if (!stateIs(INSERVICE_STATE)) {
             throw new UnsupportedOperationException("Operation invoked on open or deleted PolicyConfiguration.");
         }
-    }
-
-    private PermissionCollection getUncheckedPermissions() {
-        if (uncheckedPermissions == null) {
-            uncheckedPermissions = new Permissions();
-        }
-        
-        return uncheckedPermissions;
-    }
-
-    private PermissionCollection getExcludedPermissions() {
-        if (excludedPermissions == null) {
-            excludedPermissions = new Permissions();
-        }
-        
-        return excludedPermissions;
     }
 
     private Role getRole(String roleName) {
@@ -1041,4 +1056,5 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         doPrivilegedLog(level, msg, new Object[] { PolicyContext.getContextID() });
         doPrivilegedLog(level, msg, t);
     }
+  
 }

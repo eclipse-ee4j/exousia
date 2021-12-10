@@ -17,7 +17,6 @@ package org.glassfish.exousia.modules.def;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.list;
-import static org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory.getCurrentPolicyConfiguration;
 
 import java.security.CodeSource;
 import java.security.Permission;
@@ -34,6 +33,8 @@ import javax.security.auth.Subject;
 
 import org.glassfish.exousia.spi.PrincipalMapper;
 
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
@@ -55,9 +56,10 @@ public class DefaultPolicy
         ProtectionDomain domain,
         Permission permission) {
 
-        DefaultPolicyConfiguration policyConfiguration =
-            DefaultPolicyConfigurationFactory.getCurrentPolicyConfiguration();
-        PrincipalMapper roleMapper = policyConfiguration
+        PolicyConfiguration policyConfiguration =
+                getPolicyConfigurationFactory().getPolicyConfiguration();
+        
+        PrincipalMapper roleMapper = ((DefaultPolicyConfiguration) policyConfiguration)
             .getRoleMapper();
 
         if (isExcluded(
@@ -142,12 +144,11 @@ public class DefaultPolicy
 
         Permissions permissions = new Permissions();
 
-        DefaultPolicyConfiguration policyConfiguration =
-            getCurrentPolicyConfiguration();
-        PrincipalMapper roleMapper = policyConfiguration
-            .getRoleMapper();
-
-        Permissions excludedPermissions = policyConfiguration
+        PolicyConfiguration policyConfiguration =
+                getPolicyConfigurationFactory().getPolicyConfiguration();
+        PrincipalMapper roleMapper = getRoleMapper(policyConfiguration);
+        
+        PermissionCollection excludedPermissions = policyConfiguration
             .getExcludedPermissions();
 
         // First get all permissions from the previous (original)
@@ -190,7 +191,7 @@ public class DefaultPolicy
         // Finally get the permissions for each role
         // *that the current user has*
         //
-        Map<String, Permissions> perRolePermissions =
+        Map<String, PermissionCollection> perRolePermissions =
             policyConfiguration.getPerRolePermissions();
 
         for (String role : roleMapper
@@ -216,9 +217,10 @@ public class DefaultPolicy
 
         Permissions permissions = new Permissions();
 
-        DefaultPolicyConfigurationPermissions policyConfiguration =
-            getCurrentPolicyConfiguration();
-        Permissions excludedPermissions = policyConfiguration
+        PolicyConfiguration policyConfiguration;
+            policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
+        
+        PermissionCollection excludedPermissions = policyConfiguration
             .getExcludedPermissions();
 
         // First get all permissions from the previous
@@ -247,6 +249,14 @@ public class DefaultPolicy
     }
 
     // ### Private methods
+    
+    private PolicyConfigurationFactory getPolicyConfigurationFactory() {
+        try {
+            return PolicyConfigurationFactory.getPolicyConfigurationFactory();
+        } catch (ClassNotFoundException | PolicyContextException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     private Policy getDefaultPolicy() {
         Policy policy = Policy
@@ -259,9 +269,13 @@ public class DefaultPolicy
 
         return policy;
     }
+    
+    private PrincipalMapper getRoleMapper(PolicyConfiguration policyConfiguration) {
+        return ((DefaultPolicyConfiguration) policyConfiguration).getRoleMapper();
+    }
 
     private boolean isExcluded(
-        Permissions excludedPermissions,
+        PermissionCollection excludedPermissions,
         Permission permission) {
         if (excludedPermissions
             .implies(permission)) {
@@ -281,14 +295,14 @@ public class DefaultPolicy
     }
 
     private boolean isUnchecked(
-        Permissions uncheckedPermissions,
+            PermissionCollection uncheckedPermissions,
         Permission permission) {
         return uncheckedPermissions
             .implies(permission);
     }
 
     private boolean hasAccessViaRoles(
-        Map<String, Permissions> perRolePermissions,
+        Map<String, PermissionCollection> perRolePermissions,
         List<String> roles,
         Permission permission) {
         for (String role : roles) {
@@ -303,7 +317,7 @@ public class DefaultPolicy
     }
 
     private boolean hasAccessViaRole(
-        Map<String, Permissions> perRolePermissions,
+        Map<String, PermissionCollection> perRolePermissions,
         String role,
         Permission permission) {
         return perRolePermissions
@@ -324,7 +338,7 @@ public class DefaultPolicy
     private void collectPermissions(
         PermissionCollection sourcePermissions,
         PermissionCollection targetPermissions,
-        Permissions excludedPermissions) {
+        PermissionCollection excludedPermissions) {
 
         boolean hasExcludedPermissions = excludedPermissions
             .elements()

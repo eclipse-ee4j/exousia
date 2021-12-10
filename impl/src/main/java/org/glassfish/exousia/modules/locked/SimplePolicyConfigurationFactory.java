@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2021 Contributors to Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -18,6 +19,7 @@ package org.glassfish.exousia.modules.locked;
 
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
 /**
@@ -100,5 +102,15 @@ public class SimplePolicyConfigurationFactory extends PolicyConfigurationFactory
     @Override
     public boolean inService(String contextID) throws PolicyContextException {
         return SimplePolicyConfiguration.inService(contextID);
+    }
+
+    @Override
+    public PolicyConfiguration getPolicyConfiguration(String contextID) {
+        return SimplePolicyConfiguration.getPolicyConfig(contextID);
+    }
+
+    @Override
+    public PolicyConfiguration getPolicyConfiguration() {
+        return getPolicyConfiguration(PolicyContext.getContextID());
     }
 }
