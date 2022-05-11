@@ -33,7 +33,7 @@
 
     <name>Exousia</name>
     <description>
-    	Eclipse (future) compatible implementation of Jakarta Authorization.
+        Eclipse (future) compatible implementation of Jakarta Authorization.
     </description>
     <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
     <inceptionYear>2019</inceptionYear>
@@ -112,7 +112,7 @@
         </dependency>
         <dependency>
             <groupId>org.javassist</groupId>
-			<artifactId>javassist</artifactId>
+            <artifactId>javassist</artifactId>
             <version>3.28.0-GA</version>
             <scope>provided</scope>
             <optional>true</optional>
