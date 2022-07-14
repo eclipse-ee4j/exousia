@@ -196,7 +196,7 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <source>1.8</source>
+                            <source>8</source>
                             <quiet>true</quiet>
                             <detectJavaApiLink>false</detectJavaApiLink>
                             <additionalJOption>-Xdoclint:none</additionalJOption>
@@ -211,9 +211,6 @@ Comments to: <a href="mailto:wasp-dev@eclipse.org">exousia-dev@eclipse.org</a>.<
 Copyright &#169; 2021, 2022 Eclipse Foundation. All rights reserved.<br>
 Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
                             </bottom>
-                            <links>
-                                <link>https://jakarta.ee/specifications/platform/9/apidocs/</link>
-                            </links>
                         </configuration>
                     </execution>
                 </executions>
