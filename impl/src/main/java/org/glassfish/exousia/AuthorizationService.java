@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -69,7 +70,7 @@ public class AuthorizationService {
 
     static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
 
-    private static boolean isSecMgrOff = System.getSecurityManager() == null;
+    private static final boolean isSecMgrOff = System.getSecurityManager() == null;
 
     public static final String HTTP_SERVLET_REQUEST = "jakarta.servlet.http.HttpServletRequest";
     public static final String SUBJECT = "javax.security.auth.Subject.container";
@@ -81,7 +82,7 @@ public class AuthorizationService {
 
     private final String contextId;
 
-    private Function<Set<Principal>, ProtectionDomain> protectionDomainCreator = e -> newProtectionDomain(e);
+    private Function<Set<Principal>, ProtectionDomain> protectionDomainCreator = this::newProtectionDomain;
 
     /**
      * The authorization policy. This is the class that makes the actual decision for a permission
@@ -262,6 +263,9 @@ public class AuthorizationService {
     public void removeStatementsFromPolicy(Set<String> declaredRoles) {
         try {
             boolean inService = factory.inService(contextId);
+
+            // Open policy configuration
+            PolicyConfiguration policyConfiguration = factory.getPolicyConfiguration(contextId, false);
 
             policyConfiguration.removeUncheckedPolicy();
             policyConfiguration.removeExcludedPolicy();
