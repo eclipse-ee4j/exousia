@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2021, 2022 Contributors to Eclipse Foundation.
+    Copyright (c) 2021, 2023 Contributors to Eclipse Foundation.
     Copyright (c) 2010, 2019 Oracle and/or its affiliates. All rights reserved.
 
     This program and the accompanying materials are made available under the
@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.eclipse.ee4j</groupId>
         <artifactId>project</artifactId>
-        <version>1.0.6</version>
+        <version>1.0.8</version>
         <relativePath/>
     </parent>
 
@@ -33,7 +33,7 @@
 
     <name>Exousia</name>
     <description>
-        Eclipse (future) compatible implementation of Jakarta Authorization.
+        Eclipse compatible implementation of Jakarta Authorization.
     </description>
     <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
     <inceptionYear>2019</inceptionYear>
@@ -112,7 +112,7 @@
         <dependency>
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
-            <version>3.29.0-GA</version>
+            <version>3.29.2-GA</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -127,6 +127,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>dash-licenses-snapshots</id>
+            <url>https://repo.eclipse.org/content/groups/releases/</url>
+        </pluginRepository>
+    </pluginRepositories>
 
     <build>
         <resources>
@@ -153,9 +160,7 @@
         <plugins>
             <!-- Sets minimal Maven version to 3.6.0 -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -235,9 +240,7 @@
             
             <!-- Adds the manifest file created by the org.apache.felix:maven-bundle-plugin -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.2.2</version>
                 <configuration>
                     <archive>
                         <manifestFile>
@@ -250,9 +253,7 @@
 
             <!-- Configure the jar with the sources. -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -265,9 +266,7 @@
             
             <!-- Create Javadoc for API jar -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.4.0</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -275,7 +274,6 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <source>8</source>
                             <quiet>true</quiet>
                             <detectJavaApiLink>false</detectJavaApiLink>
                             <additionalJOption>-Xdoclint:none</additionalJOption>
@@ -286,15 +284,57 @@
                                 </group>
                             </groups>
                             <bottom><![CDATA[
-Comments to: <a href="mailto:wasp-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
-Copyright &#169; 2021, 2022 Eclipse Foundation. All rights reserved.<br>
+Comments to: <a href="mailto:exousia-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
+Copyright &#169; 2021, 2023 Eclipse Foundation. All rights reserved.<br>
 Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
                             </bottom>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-           
+            
+            <!-- Check licenses of dependencies -->
+            <plugin>
+                <groupId>org.eclipse.dash</groupId>
+                <artifactId>license-tool-plugin</artifactId>
+                <version>1.0.2</version>
+                <executions>
+                    <execution>
+                        <id>license-check</id>
+                        <goals>
+                            <goal>license-check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Generate a "consumer pom" for the generated jar -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.5.0</version>
+                <configuration>
+                    <flattenMode>ossrh</flattenMode>
+                </configuration>
+                <executions>
+                    <!-- enable flattening -->
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <!-- ensure proper cleanup -->
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
