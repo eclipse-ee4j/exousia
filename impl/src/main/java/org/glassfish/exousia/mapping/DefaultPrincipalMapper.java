@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Contributors to Eclipse Foundation.
  * Copyright (c) 2019 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -13,12 +14,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
-package org.glassfish.exousia.spi.impl;
+package org.glassfish.exousia.mapping;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.list;
 
+import jakarta.security.jacc.PrincipalMapper;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -28,22 +30,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import javax.security.auth.Subject;
-
-import org.glassfish.exousia.spi.PrincipalMapper;
 
 /**
  *
  * @author Arjan Tijms
  */
-public class DefaultRoleMapper implements PrincipalMapper {
+public class DefaultPrincipalMapper implements PrincipalMapper {
 
     private static Object geronimoPolicyConfigurationFactoryInstance;
     private static ConcurrentMap<String, Map<Principal, Set<String>>> geronimoContextToRoleMapping;
@@ -52,6 +52,18 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
     private boolean oneToOneMapping;
     private boolean anyAuthenticatedUserRoleMapped = false;
+
+    @Override
+    public Principal getCallerPrincipal(Subject subject) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Set<String> getMappedRoles(Subject subject) {
+        return new HashSet<>(getMappedRoles(subject.getPrincipals(), subject));
+    }
+
 
     public static void onFactoryCreated() {
         tryInitGeronimo();
@@ -79,7 +91,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
             try {
                 Class<?> geronimoPolicyConfigurationClass = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfiguration");
 
-                Object geronimoPolicyConfigurationProxy = Proxy.newProxyInstance(DefaultRoleMapper.class.getClassLoader(), new Class[] {geronimoPolicyConfigurationClass}, new InvocationHandler() {
+                Object geronimoPolicyConfigurationProxy = Proxy.newProxyInstance(DefaultPrincipalMapper.class.getClassLoader(), new Class[] {geronimoPolicyConfigurationClass}, new InvocationHandler() {
 
                     @SuppressWarnings("unchecked")
                     @Override
@@ -112,7 +124,7 @@ public class DefaultRoleMapper implements PrincipalMapper {
     }
 
 
-    public DefaultRoleMapper(String contextID, Collection<String> allDeclaredRoles) {
+    public DefaultPrincipalMapper(String contextID, Collection<String> allDeclaredRoles) {
         // Initialize the groupToRoles map
 
         // Try to get a hold of the proprietary role mapper of each known
@@ -128,7 +140,6 @@ public class DefaultRoleMapper implements PrincipalMapper {
         }
     }
 
-    @Override
     public List<String> getMappedRoles(Principal[] principals, Subject subject) {
         return getMappedRoles(asList(principals), subject);
     }
@@ -148,7 +159,6 @@ public class DefaultRoleMapper implements PrincipalMapper {
      * @param subject the fall back to use if looking at principals fails
      * @return a list of mapped roles
      */
-    @Override
     public List<String> getMappedRoles(Iterable<Principal> principals, Subject subject) {
 
         // Extract the list of groups from the principals. These principals typically contain
@@ -431,5 +441,6 @@ public class DefaultRoleMapper implements PrincipalMapper {
 
         return false;
     }
+
 
 }
