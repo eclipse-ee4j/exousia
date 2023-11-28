@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Contributors to Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,26 +17,22 @@
 
 package org.glassfish.exousia.modules.locked;
 
-import java.security.CodeSource;
-import java.security.NoSuchAlgorithmException;
-import java.security.Permission;
-import java.security.PermissionCollection;
-import java.security.Policy;
-import java.security.ProtectionDomain;
-import java.util.logging.Level;
-
+import jakarta.security.jacc.Policy;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
+import java.security.Permission;
+import java.security.PermissionCollection;
+import java.util.logging.Level;
+import javax.security.auth.Subject;
 
 /**
  *
  * @author monzillo
  */
-public class SimplePolicyProvider extends Policy {
+public class SimplePolicyProvider implements Policy {
 
     private static final String REUSE = "java.security.Policy.supportsReuse";
-    private Policy basePolicy;
-    
+
     /**
      * ThreadLocal object to keep track of the reentrancy status of each thread. It contains a byte[] object whose single
      * element is either 0 (initial value or no reentrancy), or 1 (current thread is reentrant). When a thread exists the
@@ -47,68 +44,6 @@ public class SimplePolicyProvider extends Policy {
             return new byte[] { 0 };
         }
     };
-
-
-    /**
-     * Create a new instance of SimplePolicyProvider delegates to existing policy provider unless one is not defined, in
-     * which case it trys to load default sun provider
-     */
-    public SimplePolicyProvider() {
-        basePolicy = Policy.getPolicy();
-        if (basePolicy == null) {
-            try {
-                basePolicy = Policy.getInstance("JavaPolicy", null);
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace(); // Too bad, no policy then
-            }
-        }
-    }
-
-    /**
-     * Evaluates the global policy and returns a PermissionCollection object specifying the set of permissions allowed for
-     * code from the specified code source.
-     *
-     * @param codesource the CodeSource associated with the caller. This encapsulates the original location of the code
-     * (where the code came from) and the public key(s) of its signer.
-     *
-     * @return the set of permissions allowed for code from <i>codesource</i> according to the policy.The returned set of
-     * permissions must be a new mutable instance and it must support heterogeneous Permission types.
-     *
-     */
-    @Override
-    public PermissionCollection getPermissions(CodeSource codesource) {
-        PermissionCollection permissionCollection = basePolicy.getPermissions(codesource);
-        try {
-            permissionCollection = SimplePolicyConfiguration.getPermissions(permissionCollection, codesource);
-        } catch (PolicyContextException pce) {
-            SimplePolicyConfiguration.logGetPermissionsFailure(codesource, pce);
-        }
-        return permissionCollection;
-    }
-
-    /**
-     * Evaluates the global policy and returns a PermissionCollection object specifying the set of permissions allowed given
-     * the characteristics of the protection domain.
-     *
-     * @param domain the ProtectionDomain associated with the caller.
-     *
-     * @return the set of permissions allowed for the <i>domain</i> according to the policy.The returned set of permissions
-     * must be a new mutable instance and it must support heterogeneous Permission types.
-     *
-     * @see java.security.ProtectionDomain
-     * @see java.security.SecureClassLoader
-     * @since 1.4
-     */
-    @Override
-    public PermissionCollection getPermissions(ProtectionDomain domain) {
-        PermissionCollection permissionCollection = basePolicy.getPermissions(domain);
-        try {
-            permissionCollection = SimplePolicyConfiguration.getPermissions(permissionCollection, domain);
-        } catch (PolicyContextException pce) {
-            SimplePolicyConfiguration.logGetPermissionsFailure(domain, pce);
-        }
-        return permissionCollection;
-    }
 
     /**
      * Evaluates the global policy for the permissions granted to the ProtectionDomain and tests whether the permission is
@@ -123,24 +58,24 @@ public class SimplePolicyProvider extends Policy {
      * @since 1.4
      */
     @Override
-    public boolean implies(ProtectionDomain domain, Permission permission) {
+    public boolean implies(Permission permissionToBeChecked, Subject subject) {
         byte[] alreadyCalled = (byte[]) reentrancyStatus.get();
         if (alreadyCalled[0] == 1) {
             return true;
         }
-        
+
         alreadyCalled[0] = 1;
         try {
-            return doImplies(domain, permission);
+            return doImplies(permissionToBeChecked, subject);
         } finally {
             alreadyCalled[0] = 0;
         }
     }
 
-    private boolean doImplies(ProtectionDomain domain, Permission permission) {
+    private boolean doImplies(Permission permissionToBeChecked, Subject subject) {
         int implies = -1;
         try {
-            implies = SimplePolicyConfiguration.implies(domain, permission);
+            implies = SimplePolicyConfiguration.implies(permissionToBeChecked, subject);
             if (implies > 0) {
                 return true;
             }
@@ -150,15 +85,13 @@ public class SimplePolicyProvider extends Policy {
                 implies = 1;
             }
         }
-        
+
         boolean doImplies = false;
-        if (implies == 0) {
-            doImplies = basePolicy.implies(domain, permission);
-        }
+
         if (!doImplies) {
-            SimplePolicyConfiguration.logAccessFailure(domain, permission);
+            SimplePolicyConfiguration.logAccessFailure(permissionToBeChecked, subject);
         }
-        
+
         return doImplies;
     }
 
@@ -169,7 +102,6 @@ public class SimplePolicyProvider extends Policy {
      */
     @Override
     public void refresh() {
-        basePolicy.refresh();
         try {
             // will enable permission caching of container, unless REUSE
             // property is set, and its value is not "true".
@@ -186,12 +118,18 @@ public class SimplePolicyProvider extends Policy {
             throw new IllegalStateException(pce);
         }
     }
-    
+
+    @Override
+    public PermissionCollection getPermissionCollection(Subject subject) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
     /*
-     * NB: 
-     * Excluded permissions should be removed from the collections returned by getPermissions. 
-     * Permissions that imply excluded permissions should also be excluded. 
-     * 
+     * NB:
+     * Excluded permissions should be removed from the collections returned by getPermissions.
+     * Permissions that imply excluded permissions should also be excluded.
+     *
      * There is a potential semantic integrity issue if the excluded permissions have been
      * assigned to the protection domain. The calls to getPermissions and implies of SimplePolicyConfiguration remove
      * excluded permissions from the returned results.

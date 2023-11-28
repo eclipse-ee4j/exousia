@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -14,46 +15,88 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
 package org.glassfish.exousia.modules.def;
-import static org.glassfish.exousia.AuthorizationService.PRINCIPAL_MAPPER;
 
-import org.glassfish.exousia.spi.PrincipalMapper;
-import org.glassfish.exousia.spi.impl.DefaultRoleMapper;
-
-import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
+import java.security.Permission;
+import java.security.PermissionCollection;
+import java.security.Permissions;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicyConfiguration
-    extends
-    DefaultPolicyConfigurationPermissions {
+public class DefaultPolicyConfiguration extends DefaultPolicyConfigurationBase {
 
-    public DefaultPolicyConfiguration(
-        String contextID) {
+    private Permissions excludedPermissions = new Permissions();
+    private Permissions uncheckedPermissions = new Permissions();
+    private Map<String, PermissionCollection> perRolePermissions = new HashMap<>();
+
+    public DefaultPolicyConfiguration(String contextID) {
         super(contextID);
     }
 
-    private PrincipalMapper roleMapper;
+    @Override
+    public void addToExcludedPolicy(Permission permission) throws PolicyContextException {
+        excludedPermissions.add(permission);
+    }
 
     @Override
-    public void commit()
-        throws PolicyContextException {
+    public void addToUncheckedPolicy(Permission permission) throws PolicyContextException {
+        uncheckedPermissions.add(permission);
+    }
 
-        roleMapper = (PrincipalMapper) PolicyContext
-            .getContext(
-                PRINCIPAL_MAPPER);
-        if (roleMapper == null) {
-            roleMapper = new DefaultRoleMapper(
-                getContextID(),
-                getPerRolePermissions()
-                    .keySet());
+    @Override
+    public void addToRole(String roleName, Permission permission) throws PolicyContextException {
+        PermissionCollection permissions = perRolePermissions.get(roleName);
+        if (permissions == null) {
+            permissions = new Permissions();
+            perRolePermissions.put(roleName, permissions);
+        }
+
+        permissions.add(permission);
+    }
+
+    @Override
+    public void delete() throws PolicyContextException {
+        removeExcludedPolicy();
+        removeUncheckedPolicy();
+        perRolePermissions.clear();
+    }
+
+    @Override
+    public void removeExcludedPolicy() throws PolicyContextException {
+        excludedPermissions = new Permissions();
+    }
+
+    @Override
+    public void removeRole(String roleName) throws PolicyContextException {
+        if (perRolePermissions.containsKey(roleName)) {
+            perRolePermissions.remove(roleName);
+        } else if ("*".equals(roleName)) {
+            perRolePermissions.clear();
         }
     }
 
-    public PrincipalMapper getRoleMapper() {
-        return roleMapper;
+    @Override
+    public void removeUncheckedPolicy() throws PolicyContextException {
+        uncheckedPermissions = new Permissions();
+    }
+
+    @Override
+    public PermissionCollection getExcludedPermissions() {
+        return excludedPermissions;
+    }
+
+    @Override
+    public PermissionCollection getUncheckedPermissions() {
+        return uncheckedPermissions;
+    }
+
+    @Override
+    public Map<String, PermissionCollection> getPerRolePermissions() {
+        return perRolePermissions;
     }
 
 }
