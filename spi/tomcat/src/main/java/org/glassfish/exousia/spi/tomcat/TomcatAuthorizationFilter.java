@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation.
  * Copyright (c) 2020, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -69,7 +70,9 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         List<String> declaredRoles = asList(context.findSecurityRoles());
         boolean isDenyUncoveredHttpMethods = root.getContext().getDenyUncoveredHttpMethods();
 
-        AuthorizationService.setThreadContextId(servletContext);
+        String contextId = AuthorizationService.getServletContextId(servletContext);
+
+        AuthorizationService.setThreadContextId(contextId);
 
         // Initialize the AuthorizationService, which is a front-end for Jakarta Authorization.
         // It specifically tells Jakarta Authorization how to get the current request, and the current subject
@@ -77,7 +80,7 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
             servletContext,
             () -> getSubject(localServletRequest.get()));
 
-        authorizationService.setRequestSupplier(() -> localServletRequest.get());
+        authorizationService.setRequestSupplier(contextId, () -> localServletRequest.get());
 
         // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
         // repository as well. That way Jakarta Authorization can work with the same data as Tomcat

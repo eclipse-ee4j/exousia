@@ -142,12 +142,12 @@ public class AuthorizationService {
 
             PolicyContext.registerHandler(
                 SUBJECT,
-                new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
+                new DefaultPolicyContextHandler(contextId, SUBJECT, subjectSupplier),
                 true);
 
             PolicyContext.registerHandler(
                 PRINCIPAL_MAPPER,
-                new DefaultPolicyContextHandler(PRINCIPAL_MAPPER, () ->
+                new DefaultPolicyContextHandler(contextId, PRINCIPAL_MAPPER, () ->
                     getOrCreatePrincipalMapper(
                         contextId,
                         principalMapperSupplier != null? principalMapperSupplier : () -> getDefaultRoleMapper(contextId))),
@@ -158,33 +158,33 @@ public class AuthorizationService {
         }
     }
 
-    public void setRequestSupplier(Supplier<HttpServletRequest> requestSupplier) {
+    public void setRequestSupplier(String contextId, Supplier<HttpServletRequest> requestSupplier) {
         try {
             PolicyContext.registerHandler(
                 HTTP_SERVLET_REQUEST,
-                new DefaultPolicyContextHandler(HTTP_SERVLET_REQUEST, requestSupplier),
+                new DefaultPolicyContextHandler(contextId, HTTP_SERVLET_REQUEST, requestSupplier),
                 true);
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public void setSubjectSupplier(Supplier<Subject> subjectSupplier) {
+    public void setSubjectSupplier(String contextId, Supplier<Subject> subjectSupplier) {
         try {
             PolicyContext.registerHandler(
                 SUBJECT,
-                new DefaultPolicyContextHandler(SUBJECT, subjectSupplier),
+                new DefaultPolicyContextHandler(contextId, SUBJECT, subjectSupplier),
                 true);
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public void setEnterpriseBeanSupplier(Supplier<Object> beanSupplier) {
+    public void setEnterpriseBeanSupplier(String contextId, Supplier<Object> beanSupplier) {
         try {
             PolicyContext.registerHandler(
                 ENTERPRISE_BEAN,
-                new DefaultPolicyContextHandler(ENTERPRISE_BEAN, beanSupplier),
+                new DefaultPolicyContextHandler(contextId, ENTERPRISE_BEAN, beanSupplier),
                 true);
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
@@ -381,6 +381,10 @@ public class AuthorizationService {
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public void destroy() {
+        DefaultPolicyContextHandler.removeAllForContextId(contextId);
     }
 
     public PolicyConfiguration getPolicyConfiguration() {

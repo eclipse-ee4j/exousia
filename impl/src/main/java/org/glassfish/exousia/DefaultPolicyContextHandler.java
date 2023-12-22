@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2023 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,41 +17,44 @@
 
 package org.glassfish.exousia;
 
-import java.util.function.Supplier;
-
+import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 import jakarta.security.jacc.PolicyContextHandler;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 /**
- * 
+ *
  * @author Arjan Tijms
  */
 public class DefaultPolicyContextHandler implements PolicyContextHandler {
-    
-    private final String key;
-    private final String[] keys;
-    private final Supplier<? extends Object> contextObjectSupplier;
-    
-    public DefaultPolicyContextHandler(String key, Supplier<? extends Object> contextObjectSupplier) {
-        this.key = key;
-        this.keys = new String[] { key };
-        this.contextObjectSupplier = contextObjectSupplier;
+
+    private static Map<String, Map<String, Supplier<? extends Object>>> handlers = new ConcurrentHashMap<>();
+
+    public static void removeAllForContextId(String contextId) {
+        handlers.remove(contextId);
+    }
+
+    public DefaultPolicyContextHandler(String contextId, String key, Supplier<? extends Object> contextObjectSupplier) {
+        handlers.computeIfAbsent(contextId, e -> new ConcurrentHashMap<>())
+                .computeIfAbsent(key, e -> contextObjectSupplier);
+
     }
 
     @Override
     public Object getContext(String key, Object data) throws PolicyContextException {
-        return contextObjectSupplier.get();
+        return handlers.get(PolicyContext.getContextID()).get(key).get();
     }
 
     @Override
     public boolean supports(String key) throws PolicyContextException {
-        return this.key.equals(key);
+        return handlers.get(PolicyContext.getContextID()).containsKey(key);
     }
 
     @Override
     public String[] getKeys() throws PolicyContextException {
-        return keys;
+        return handlers.get(PolicyContext.getContextID()).keySet().toArray(String[]::new);
     }
-    
-    
+
 }
