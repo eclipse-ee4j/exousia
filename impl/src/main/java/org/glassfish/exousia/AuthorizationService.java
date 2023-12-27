@@ -596,7 +596,7 @@ public class AuthorizationService {
         if (constrainedUriRequestAttribute != null) {
             String uri = (String) request.getAttribute(constrainedUriRequestAttribute);
             if (uri != null) {
-                return uri;
+                return uri.replace(":", "%3A");
             }
         }
 
@@ -605,7 +605,7 @@ public class AuthorizationService {
             return "";
         }
 
-        return relativeURI.replaceAll(":", "%3A");
+        return relativeURI.replace(":", "%3A");
     }
 
     private PrincipalMapper getOrCreatePrincipalMapper(String contextId, Supplier<PrincipalMapper> principalMapperSupplier) {
