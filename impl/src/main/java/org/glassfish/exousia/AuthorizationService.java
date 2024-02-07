@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -78,6 +78,7 @@ public class AuthorizationService {
      * request.
      */
     private final Policy policy;
+    private final PolicyFactory policyFactory;
     private final PolicyConfigurationFactory factory;
     private final PolicyConfiguration policyConfiguration;
     private final Map<String, jakarta.security.jacc.PrincipalMapper> principalMapper = new ConcurrentHashMap<>();
@@ -110,11 +111,11 @@ public class AuthorizationService {
 
     public AuthorizationService(
             Class<?> factoryClass, Class<? extends Policy> policyClass, String contextId,
-            Supplier<Subject> subjectSupplier, Supplier<PrincipalMapper> principalMapperSupplierr) {
+            Supplier<Subject> subjectSupplier, Supplier<PrincipalMapper> principalMapperSupplier) {
 
         this(
             installFactory(factoryClass), installPolicy(policyClass), contextId,
-            subjectSupplier, principalMapperSupplierr);
+            subjectSupplier, principalMapperSupplier);
     }
 
     public AuthorizationService(
@@ -122,7 +123,7 @@ public class AuthorizationService {
         Supplier<Subject> subjectSupplier, Supplier<PrincipalMapper> principalMapperSupplier) {
 
         this(
-            getConfigurationFactory(), getPolicy(), contextId,
+            getConfigurationFactory(), null, contextId,
             subjectSupplier, principalMapperSupplier);
     }
 
@@ -134,7 +135,7 @@ public class AuthorizationService {
             this.policyConfiguration = factory.getPolicyConfiguration(contextId, false);
             this.policy = policy;
             this.contextId = contextId;
-
+            this.policyFactory = PolicyFactory.getPolicyFactory();
 
             // Sets the context Id (aka application Id), which may be used by authorization modules to get the right
             // authorization config
@@ -263,7 +264,7 @@ public class AuthorizationService {
             // Refresh policy if the context was in service
             if (inService) {
                 // TODO: is this needed? refresh seems to do no nothing
-                policy.refresh();
+                getPolicy().refresh();
             }
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
@@ -347,7 +348,7 @@ public class AuthorizationService {
                 logger.log(FINE, () -> "Jakarta Authorization: committed policy for context: " + contextId);
             }
 
-            policy.refresh();
+            getPolicy().refresh();
         } catch (PolicyContextException pce) {
             throw new IllegalStateException(pce);
         }
@@ -376,7 +377,7 @@ public class AuthorizationService {
         // Refresh policy if the context was in service
         try {
             if (factory.inService(contextId)) {
-                policy.refresh();
+                getPolicy().refresh();
             }
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
@@ -418,14 +419,22 @@ public class AuthorizationService {
 
     public boolean checkWebResourcePermission(HttpServletRequest request) {
         try {
-            Subject subject = (Subject) PolicyContext.getContext(SUBJECT);
+            Subject subject = PolicyContext.getContext(SUBJECT);
 
             return checkWebResourcePermission(
                 request,
-                subject == null? null : subject.getPrincipals());
+                subject);
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public boolean checkWebResourcePermission(HttpServletRequest request, Subject subject) {
+        return checkPermission(
+            new WebResourcePermission(
+                getConstrainedURI(request),
+                request.getMethod()),
+                subject);
     }
 
     public boolean checkWebResourcePermission(HttpServletRequest request, Set<Principal> principals) {
@@ -438,15 +447,21 @@ public class AuthorizationService {
 
     public boolean checkWebRoleRefPermission(String servletName, String role) {
         try {
-            Subject subject = (Subject) PolicyContext.getContext(SUBJECT);
+            Subject subject = PolicyContext.getContext(SUBJECT);
 
             return checkWebRoleRefPermission(
                 servletName,
                 role,
-                subject == null? null : subject.getPrincipals());
+                subject);
         } catch (PolicyContextException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    public boolean checkWebRoleRefPermission(String servletName, String role, Subject subject) {
+        return checkPermission(
+                new WebRoleRefPermission(servletName, role),
+                subject);
     }
 
     public boolean checkWebRoleRefPermission(String servletName, String role, Set<Principal> principals) {
@@ -500,7 +515,7 @@ public class AuthorizationService {
 
             // Only do refresh policy if the deleted context was in service
             if (wasInService) {
-                policy.refresh();
+                getPolicy().refresh();
             }
 
         } catch (PolicyContextException pce) {
@@ -529,11 +544,15 @@ public class AuthorizationService {
 
 
     boolean checkPermission(Permission permissionToBeChecked) {
-        return policy.implies(permissionToBeChecked);
+        return getPolicy().implies(permissionToBeChecked);
+    }
+
+    boolean checkPermission(Permission permissionToBeChecked, Subject subject) {
+        return getPolicy().implies(permissionToBeChecked, subject != null? subject : new Subject());
     }
 
     boolean checkPermission(Permission permissionToBeChecked, Set<Principal> principals) {
-        return policy.implies(permissionToBeChecked, principals != null? principals : emptySet());
+        return getPolicy().implies(permissionToBeChecked, principals != null? principals : emptySet());
     }
 
     boolean checkPermissionScoped(Permission permissionToBeChecked, Set<Principal> principals) {
@@ -541,7 +560,7 @@ public class AuthorizationService {
         try {
             oldContextId = setThreadContextId(contextId);
 
-            return policy.implies(permissionToBeChecked, principals);
+            return getPolicy().implies(permissionToBeChecked, principals);
         } catch (Throwable t) {
             logger.log(SEVERE, "jacc_is_caller_in_role_exception", t);
         } finally {
@@ -574,7 +593,7 @@ public class AuthorizationService {
         try {
             PolicyFactory.getPolicyFactory().setPolicy(policyClass.getConstructor().newInstance());
 
-            return getPolicy();
+            return PolicyFactory.getPolicyFactory().getPolicy();
         } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
             throw new IllegalStateException(e);
         }
@@ -588,8 +607,13 @@ public class AuthorizationService {
         }
     }
 
-    private static Policy getPolicy() {
-        return PolicyFactory.getPolicyFactory().getPolicy();
+    private Policy getPolicy() {
+        if (policy != null) {
+            return policy;
+        }
+
+        // (or obtain once and cache?)
+        return policyFactory.getPolicy(contextId);
     }
 
     private String getConstrainedURI(HttpServletRequest request) {
