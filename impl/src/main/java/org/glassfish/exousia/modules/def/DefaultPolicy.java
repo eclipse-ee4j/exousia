@@ -65,7 +65,7 @@ public class DefaultPolicy implements Policy {
         // Note that these are obtained for the current (application) context ID, and this policy could potentially
         // be used for multiple context IDs. Therefore these objects should not be cached as instance data of this policy.
         PolicyConfiguration policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
-        PrincipalMapper roleMapper = getRoleMapper();
+        PrincipalMapper roleMapper = PolicyContext.get(PRINCIPAL_MAPPER);
 
         if (!roleMapper.isAnyAuthenticatedUserRoleMapped() && !subject.getPrincipals().isEmpty()) {
             // The "any authenticated user" role is not mapped, so available to anyone and the current
@@ -93,7 +93,7 @@ public class DefaultPolicy implements Policy {
         Permissions permissions = new Permissions();
 
         PolicyConfiguration policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
-        PrincipalMapper roleMapper = getRoleMapper();
+        PrincipalMapper roleMapper = PolicyContext.get(PRINCIPAL_MAPPER);
 
         PermissionCollection excludedPermissions = policyConfiguration.getExcludedPermissions();
 
@@ -123,14 +123,6 @@ public class DefaultPolicy implements Policy {
         }
 
         return policyConfigurationFactory;
-    }
-
-    private PrincipalMapper getRoleMapper() {
-        if (principalMapper == null) {
-            principalMapper = PolicyContext.get(PRINCIPAL_MAPPER);
-        }
-
-        return principalMapper;
     }
 
     private boolean isExcluded(PermissionCollection excludedPermissions, Permission permission) {
