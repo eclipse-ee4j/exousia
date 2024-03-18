@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023 Contributors to Eclipse Foundation.
+ * Copyright (c) 2021, 2024 Contributors to Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -21,27 +21,6 @@ import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
-import java.lang.reflect.Constructor;
-import java.security.AccessController;
-import java.security.CodeSource;
-import java.security.Permission;
-import java.security.PermissionCollection;
-import java.security.Permissions;
-import java.security.Principal;
-import java.security.PrivilegedAction;
-import java.security.ProtectionDomain;
-import java.security.SecurityPermission;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.management.MBeanPermission;
-import javax.security.auth.Subject;
 import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyContext;
@@ -50,6 +29,23 @@ import jakarta.security.jacc.PolicyContextHandler;
 import jakarta.security.jacc.WebResourcePermission;
 import jakarta.security.jacc.WebRoleRefPermission;
 import jakarta.security.jacc.WebUserDataPermission;
+import java.lang.reflect.Constructor;
+import java.security.CodeSource;
+import java.security.Permission;
+import java.security.PermissionCollection;
+import java.security.Permissions;
+import java.security.Principal;
+import java.security.ProtectionDomain;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.management.MBeanPermission;
+import javax.security.auth.Subject;
 
 /**
  * The methods of this interface are used by containers to create policy statements in a Policy provider.
@@ -66,7 +62,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     public static final int INSERVICE_STATE = 2;
     public static final int DELETED_STATE = 3;
 
-    private static final Permission setPolicyPermission = new SecurityPermission("setPolicy");
     private String contextId;
     private int state = OPEN_STATE;
 
@@ -186,7 +181,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void addToRole(String roleName, PermissionCollection permissions) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -222,7 +216,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void addToRole(String roleName, Permission permission) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -253,7 +246,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void addToUncheckedPolicy(PermissionCollection permissions) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -286,7 +278,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void addToUncheckedPolicy(Permission permission) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -319,7 +310,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void addToExcludedPolicy(PermissionCollection permissions) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -352,7 +342,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void addToExcludedPolicy(Permission permission) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -383,7 +372,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void removeRole(String roleName) throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -419,7 +407,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void removeUncheckedPolicy() throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -445,7 +432,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void removeExcludedPolicy() throws PolicyContextException {
-        checkSetPolicyPermission();
         writeLock.lock();
         try {
             assertStateIsOpen();
@@ -486,7 +472,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void linkConfiguration(PolicyConfiguration link) throws PolicyContextException {
-        checkSetPolicyPermission();
         readLock.lock();
         try {
             assertStateIsOpen();
@@ -520,7 +505,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void delete() throws PolicyContextException {
-        checkSetPolicyPermission();
         SharedState.removeLinks(contextId);
 
         /*
@@ -562,7 +546,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     @Override
     public void commit() throws PolicyContextException {
-        checkSetPolicyPermission();
         boolean initRoles = false;
         writeLock.lock();
         try {
@@ -663,14 +646,6 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
 
     protected static SimplePolicyConfiguration getPolicyConfig(String pcid) {
         return SharedState.lookupConfig(pcid);
-    }
-
-    protected static void checkSetPolicyPermission() {
-        SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(setPolicyPermission);
-        }
-
     }
 
     private void setState(int stateValue) {
@@ -809,8 +784,8 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     /**
      * Evaluates the policy to determine whether the permissions is granted to the ProtectionDomain.
      *
-     * @param domain the ProtectionDomain to test
-     * @param permission the Permission object to be tested for implication.
+     * @param permissionToBeChecked the Permission object to be tested for implication.
+     * @param subject the subject to test
      *
      * @return integer -1 if excluded, 0 if not implied, 1 if implied granted to this ProtectionDomain.
      *
@@ -991,22 +966,12 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     static void refresh() throws PolicyContextException {
     }
 
-    static void doPrivilegedLog(Level level, String msg, Object[] params) {
+    static void doLog(Level level, String msg, Object[] params) {
         Logger logger = SharedState.getLogger();
 
         if (logger.isLoggable(level)) {
-            if (System.getSecurityManager() == null) {
-                logger.log(level, msg, params);
-            } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            logger.log(level, msg, params);
 
-                    @Override
-                    public Object run() {
-                        logger.log(level, msg, params);
-                        return null;
-                    }
-                });
-            }
         }
     }
 
@@ -1014,18 +979,8 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         Logger logger = SharedState.getLogger();
 
         if (logger.isLoggable(level)) {
-            if (System.getSecurityManager() == null) {
-                logger.log(level, msg, t);
-            } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            logger.log(level, msg, t);
 
-                    @Override
-                    public Object run() {
-                        logger.log(level, msg, t);
-                        return null;
-                    }
-                });
-            }
         }
     }
 
@@ -1033,7 +988,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     // ### Internal logging interfaces start here ###
 
     static void logGetPermissionsFailure(Object o, Throwable t) {
-        doPrivilegedLog(INFO, "getPermissions.failure", new Object[] { PolicyContext.getContextID(), o });
+        doLog(INFO, "getPermissions.failure", new Object[] { PolicyContext.getContextID(), o });
         doPrivilegedLog(INFO, "getPermissions.failure", t);
     }
 
@@ -1048,12 +1003,12 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
 
     static void logAccessFailure(Permission permissionToBeChecked, Subject subject) {
         if (permissionShouldBeLogged(permissionToBeChecked) || SharedState.getLogger().isLoggable(FINE)) {
-            doPrivilegedLog(FINE, "Domain.that.failed", new Object[] { PolicyContext.getContextID(), permissionToBeChecked, subject });
+            doLog(FINE, "Domain.that.failed", new Object[] { PolicyContext.getContextID(), permissionToBeChecked, subject });
         }
     }
 
     static void logException(Level level, String msg, Throwable t) {
-        doPrivilegedLog(level, msg, new Object[] { PolicyContext.getContextID() });
+        doLog(level, msg, new Object[] { PolicyContext.getContextID() });
         doPrivilegedLog(level, msg, t);
     }
 

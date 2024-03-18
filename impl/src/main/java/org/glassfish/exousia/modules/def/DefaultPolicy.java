@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,18 +16,17 @@
  */
 package org.glassfish.exousia.modules.def;
 
+import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
 import static java.util.Collections.list;
 
 import jakarta.security.jacc.Policy;
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
 import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
 import jakarta.security.jacc.PrincipalMapper;
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.Permissions;
-import java.security.Principal;
 import java.util.Map;
 import java.util.Set;
 import javax.security.auth.Subject;
@@ -38,46 +37,55 @@ import javax.security.auth.Subject;
  */
 public class DefaultPolicy implements Policy {
 
+    private PolicyConfigurationFactory policyConfigurationFactory;
+    private PrincipalMapper principalMapper;
+
     @Override
-    public boolean implies(Permission permissionToBeChecked, Subject subject) {
+    public boolean isExcluded(Permission permissionToBeChecked) {
+        return isExcluded(
+                getPolicyConfigurationFactory().getPolicyConfiguration().getExcludedPermissions(),
+                permissionToBeChecked);
+    }
+
+    @Override
+    public boolean isUnchecked(Permission permissionToBeChecked) {
+        return isUnchecked(
+                getPolicyConfigurationFactory().getPolicyConfiguration().getUncheckedPermissions(),
+                permissionToBeChecked);
+    }
+
+    @Override
+    public boolean impliesByRole(Permission permissionToBeChecked, Subject subject) {
+        if (subject == null) {
+            // Without a subject we can't check for roles, so we can shortcut the outcome.
+            return false;
+        }
+
+        // Get the configuration and mapper instances.
+        // Note that these are obtained for the current (application) context ID, and this policy could potentially
+        // be used for multiple context IDs. Therefore these objects should not be cached as instance data of this policy.
         PolicyConfiguration policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
         PrincipalMapper roleMapper = getRoleMapper();
 
-        if (isExcluded(policyConfiguration.getExcludedPermissions(), permissionToBeChecked)) {
-            // Excluded permissions cannot be accessed by anyone
-            return false;
-        }
-
-        if (isUnchecked(policyConfiguration.getUncheckedPermissions(), permissionToBeChecked)) {
-            // Unchecked permissions are free to be accessed by everyone
-            return true;
-        }
-
-        if (subject == null) {
-            return false;
-        }
-
-        Set<Principal> currentUserPrincipals = subject.getPrincipals();
-
-        if (!roleMapper.isAnyAuthenticatedUserRoleMapped() && !currentUserPrincipals.isEmpty()) {
+        if (!roleMapper.isAnyAuthenticatedUserRoleMapped() && !subject.getPrincipals().isEmpty()) {
             // The "any authenticated user" role is not mapped, so available to anyone and the current
-            // user is assumed to be authenticated (we assume that an unauthenticated user doesn't have any
+            // caller is assumed to be authenticated (we assume that an unauthenticated caller doesn't have any
             // principals whatever they are)
             if (hasAccessViaRole(policyConfiguration.getPerRolePermissions(), "**", permissionToBeChecked)) {
                 // Access is granted purely based/ on the user being authenticated
-                // (the actual roles, if any, the user has it not important)
+                // (the actual roles, if any, the caller has are not important)
                 return true;
             }
         }
 
-        if (hasAccessViaRoles(policyConfiguration.getPerRolePermissions(), roleMapper.getMappedRoles(subject),
-                permissionToBeChecked)) {
-            // Access is granted via role. Note that if this returns false/ it doesn't mean the permission is not granted.
-            // A role can only grant, not take away permissions.
-            return true;
-        }
-
-        return false;
+        // Check to see if access is granted via role.
+        // Note that if this returns false it doesn't necessarily mean the permission is not granted.
+        // A role can only grant, not take away permissions. Other checks (perhaps another custom policy that embeds us)
+        // may still grant the permission.
+        return hasAccessViaRoles(
+                policyConfiguration.getPerRolePermissions(),
+                roleMapper.getMappedRoles(subject),
+                permissionToBeChecked);
     }
 
     @Override
@@ -110,19 +118,19 @@ public class DefaultPolicy implements Policy {
     // ### Private methods
 
     private PolicyConfigurationFactory getPolicyConfigurationFactory() {
-        try {
-            return PolicyConfigurationFactory.getPolicyConfigurationFactory();
-        } catch (ClassNotFoundException | PolicyContextException e) {
-            throw new IllegalStateException(e);
+        if (policyConfigurationFactory == null) {
+            policyConfigurationFactory = PolicyConfigurationFactory.get();
         }
+
+        return policyConfigurationFactory;
     }
 
     private PrincipalMapper getRoleMapper() {
-        try {
-            return PolicyContext.getContext(PolicyContext.PRINCIPAL_MAPPER);
-        } catch (PolicyContextException e) {
-            throw new IllegalStateException(e);
+        if (principalMapper == null) {
+            principalMapper = PolicyContext.get(PRINCIPAL_MAPPER);
         }
+
+        return principalMapper;
     }
 
     private boolean isExcluded(PermissionCollection excludedPermissions, Permission permission) {

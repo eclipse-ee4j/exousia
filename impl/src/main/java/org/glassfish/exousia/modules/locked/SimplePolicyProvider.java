@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to Eclipse Foundation.
+ * Copyright (c) 2023, 2024 Contributors to Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -36,7 +36,7 @@ public class SimplePolicyProvider implements Policy {
     /**
      * ThreadLocal object to keep track of the reentrancy status of each thread. It contains a byte[] object whose single
      * element is either 0 (initial value or no reentrancy), or 1 (current thread is reentrant). When a thread exists the
-     * implies method, byte[0] is alwasy reset to 0.
+     * implies method, byte[0] is always reset to 0.
      */
     private static ThreadLocal<Object> reentrancyStatus = new ThreadLocal<>() {
         @Override
@@ -49,8 +49,8 @@ public class SimplePolicyProvider implements Policy {
      * Evaluates the global policy for the permissions granted to the ProtectionDomain and tests whether the permission is
      * granted.
      *
-     * @param domain the ProtectionDomain to test
-     * @param permission the Permission object to be tested for implication.
+     * @param permissionToBeChecked the Permission object to be tested for implication.
+     * @param subject the Subject to test
      *
      * @return true if "permission" is a proper subset of a permission granted to this ProtectionDomain.
      *
@@ -123,6 +123,24 @@ public class SimplePolicyProvider implements Policy {
     public PermissionCollection getPermissionCollection(Subject subject) {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public boolean impliesByRole(Permission permissionToBeChecked, Subject subject) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isExcluded(Permission permissionToBeChecked) {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    public boolean isUnchecked(Permission permissionToBeChecked) {
+        // TODO Auto-generated method stub
+        return false;
     }
 
     /*
