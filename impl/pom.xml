@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2021, 2023 Contributors to Eclipse Foundation.
+    Copyright (c) 2021, 2024 Contributors to Eclipse Foundation.
     Copyright (c) 2010, 2019 Oracle and/or its affiliates. All rights reserved.
 
     This program and the accompanying materials are made available under the
@@ -96,21 +96,21 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <version>6.1.0-M1</version>
+            <version>6.1.0-M2</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>jakarta.authorization</groupId>
             <artifactId>jakarta.authorization-api</artifactId>
-            <version>3.0.0-M1</version>
+            <version>3.0.0-M2</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
-            <version>3.29.2-GA</version>
+            <version>3.30.2-GA</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -178,7 +178,7 @@
             
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
+                <version>3.12.1</version>
                 <configuration>
                     <release>17</release>
                 </configuration>
@@ -286,7 +286,7 @@
                             </groups>
                             <bottom><![CDATA[
 Comments to: <a href="mailto:exousia-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
-Copyright &#169; 2021, 2023 Eclipse Foundation. All rights reserved.<br>
+Copyright &#169; 2021, 2024 Eclipse Foundation. All rights reserved.<br>
 Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
                             </bottom>
                         </configuration>
@@ -298,7 +298,7 @@ Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">l
             <plugin>
                 <groupId>org.eclipse.dash</groupId>
                 <artifactId>license-tool-plugin</artifactId>
-                <version>1.0.2</version>
+                <version>1.1.0</version>
                 <executions>
                     <execution>
                         <id>license-check</id>
@@ -313,7 +313,7 @@ Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">l
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.5.0</version>
+                <version>1.6.0</version>
                 <configuration>
                     <flattenMode>ossrh</flattenMode>
                 </configuration>

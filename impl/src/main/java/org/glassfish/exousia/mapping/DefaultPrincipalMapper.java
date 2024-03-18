@@ -40,6 +40,9 @@ import java.util.concurrent.ConcurrentMap;
 import javax.security.auth.Subject;
 
 /**
+ * TODO: much or all of this should be removed and/or refactored.
+ * The servers supported here via reflection don't support this version of authorization
+ * at all, and have no need to be longer supported here.
  *
  * @author Arjan Tijms
  */
@@ -74,7 +77,8 @@ public class DefaultPrincipalMapper implements PrincipalMapper {
             // Geronimo 3.0.1 contains a protection mechanism to ensure only a Geronimo policy provider is installed.
             // This protection can be beat by creating an instance of GeronimoPolicyConfigurationFactory once. This instance
             // will statically register itself with an internal Geronimo class
-            geronimoPolicyConfigurationFactoryInstance = Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfigurationFactory").newInstance();
+            geronimoPolicyConfigurationFactoryInstance =
+                Class.forName("org.apache.geronimo.security.jacc.mappingprovider.GeronimoPolicyConfigurationFactory").getDeclaredConstructor().newInstance();
             geronimoContextToRoleMapping = new ConcurrentHashMap<>();
         } catch (Exception e) {
             // ignore
