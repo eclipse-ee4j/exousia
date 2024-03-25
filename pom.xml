@@ -19,7 +19,7 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>org.eclipse.ee4j</groupId>
         <artifactId>project</artifactId>
@@ -34,11 +34,11 @@
 
     <name>Exousia Parent</name>
     <description>
-    	Eclipse compatible implementation of Jakarta Authorization - Parent.
+      Eclipse compatible implementation of Jakarta Authorization - Parent.
     </description>
     <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
     <inceptionYear>2019</inceptionYear>
- 
+
     <licenses>
         <license>
             <name>EPL 2.0</name>
@@ -67,7 +67,7 @@
            <url>https://github.com/eclipse-ee4j/exousia/graphs/contributors</url>
        </contributor>
     </contributors>
-    
+
     <mailingLists>
         <mailingList>
             <name>Jakarta Authorization dev mailing list</name>
@@ -92,7 +92,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
-    
+
     <modules>
         <module>impl</module>
         <module>spi</module>
