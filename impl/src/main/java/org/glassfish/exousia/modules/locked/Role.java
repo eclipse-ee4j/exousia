@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,20 +17,24 @@
 
 package org.glassfish.exousia.modules.locked;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.Permissions;
 import java.security.Principal;
 import java.util.Enumeration;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- *
  * @author monzillo
  */
 public class Role {
 
-    private String roleName;
+    private static final Logger LOG = System.getLogger(Role.class.getName());
+
+    private final String roleName;
     private Permissions permissions;
     private Set<Principal> principals;
     private boolean isAnyAuthenticatedUserRole;
@@ -46,7 +51,7 @@ public class Role {
         if (permissions == null) {
             permissions = new Permissions();
         }
-        
+
         permissions.add(permission);
     }
 
@@ -54,7 +59,7 @@ public class Role {
         if (permissions == null) {
             permissions = new Permissions();
         }
-        
+
         for (Enumeration<Permission> e = permissionCollection.elements(); e.hasMoreElements();) {
             permissions.add(e.nextElement());
         }
@@ -74,14 +79,14 @@ public class Role {
         if (permissions == null) {
             return false;
         }
-        
+
         return permissions.implies(permission);
     }
 
     void determineAnyAuthenticatedUserRole() {
         isAnyAuthenticatedUserRole = false;
         // If no principals are present then any authenticated user is possible
-        if ((principals == null) || principals.isEmpty()) {
+        if (principals == null || principals.isEmpty()) {
             isAnyAuthenticatedUserRole = true;
         }
     }
@@ -98,44 +103,41 @@ public class Role {
         if (principals == null) {
             return false;
         }
-        
+
         return principals.contains(principal);
     }
 
-    boolean arePrincipalsInRole(Principal subject[]) {
+    boolean arePrincipalsInRole(Principal[] subject) {
         if (subject == null || subject.length == 0) {
             return false;
         }
-        
+
         if (isAnyAuthenticatedUserRole) {
             return true;
         }
-        
+
+        LOG.log(Level.DEBUG, () -> "Known principals: "
+            + principals.stream().map(Principal::toString).collect(Collectors.joining(", ")));
         if (principals == null || principals.isEmpty()) {
             return false;
         }
 
-        boolean isInRole = false;
         for (Principal principal : subject) {
+            LOG.log(Level.DEBUG, "Checking principal: {0}", principal);
             if (principals.contains(principal)) {
-                isInRole = true;
-                break;
+                return true;
             }
         }
-        
-        return isInRole;
+        return false;
     }
-    
+
     /**
      * NB: Class Overrides equals and hashCode Methods such that 2 Roles are equal simply based on having a common name.
-     *
-     * @param o
-     * @return
      */
     @Override
     public boolean equals(Object o) {
-        Role other = (o == null || !(o instanceof Role) ? null : (Role) o);
-        return (o == null ? false : getName().equals(other.getName()));
+        Role other = o == null || !(o instanceof Role) ? null : (Role) o;
+        return other == null ? false : getName().equals(other.getName());
     }
 
     @Override
@@ -143,5 +145,11 @@ public class Role {
         int hash = 7;
         hash = 29 * hash + (this.roleName != null ? this.roleName.hashCode() : 0);
         return hash;
+    }
+
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[" + roleName + "]";
     }
 }

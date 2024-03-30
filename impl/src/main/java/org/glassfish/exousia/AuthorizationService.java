@@ -18,6 +18,7 @@
 package org.glassfish.exousia;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.SEVERE;
 import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
 import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
@@ -549,14 +550,19 @@ public class AuthorizationService {
 
 
     boolean checkPermission(Permission permissionToBeChecked) {
+        logger.log(FINEST, "checkPermission(permissionToBeChecked={0})", permissionToBeChecked);
         return policy.implies(emptyProtectionDomain, permissionToBeChecked);
     }
 
     boolean checkPermission(Permission permissionToBeChecked, Set<Principal> principals) {
+        logger.log(FINEST, "checkPermission(permissionToBeChecked={0}, principals={1})",
+            new Object[] {permissionToBeChecked, principals});
         return policy.implies(newProtectionDomain(principals), permissionToBeChecked);
     }
 
     boolean checkPermissionScoped(Permission permissionToBeChecked, Set<Principal> principals) {
+        logger.log(FINEST, "checkPermission(permissionToBeChecked={0}, principals={1})",
+            new Object[] {permissionToBeChecked, principals});
         String oldContextId = null;
         try {
             oldContextId = setThreadContextId(contextId);
@@ -684,12 +690,12 @@ public class AuthorizationService {
     }
 
     @FunctionalInterface
-    private static interface PrivilegedExceptionRunnable {
+    private interface PrivilegedExceptionRunnable {
         void run() throws PrivilegedActionException;
     }
 
     @FunctionalInterface
-    public static interface ThrowableSupplier<T> {
+    public interface ThrowableSupplier<T> {
         T get() throws Throwable;
     }
 

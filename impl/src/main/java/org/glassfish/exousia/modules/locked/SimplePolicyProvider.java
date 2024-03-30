@@ -16,6 +16,9 @@
 
 package org.glassfish.exousia.modules.locked;
 
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
+
 import java.security.CodeSource;
 import java.security.NoSuchAlgorithmException;
 import java.security.Permission;
@@ -24,8 +27,11 @@ import java.security.Policy;
 import java.security.ProtectionDomain;
 import java.util.logging.Level;
 
-import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
+import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.doPrivilegedLog;
+import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.logAccessFailure;
+import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.logException;
 
 /**
  *
@@ -35,7 +41,7 @@ public class SimplePolicyProvider extends Policy {
 
     private static final String REUSE = "java.security.Policy.supportsReuse";
     private Policy basePolicy;
-    
+
     /**
      * ThreadLocal object to keep track of the reentrancy status of each thread. It contains a byte[] object whose single
      * element is either 0 (initial value or no reentrancy), or 1 (current thread is reentrant). When a thread exists the
@@ -128,7 +134,7 @@ public class SimplePolicyProvider extends Policy {
         if (alreadyCalled[0] == 1) {
             return true;
         }
-        
+
         alreadyCalled[0] = 1;
         try {
             return doImplies(domain, permission);
@@ -141,24 +147,27 @@ public class SimplePolicyProvider extends Policy {
         int implies = -1;
         try {
             implies = SimplePolicyConfiguration.implies(domain, permission);
+            doPrivilegedLog(FINEST, "implies = {0}", implies);
             if (implies > 0) {
                 return true;
             }
         } catch (PolicyContextException pce) {
+            logException(FINE, "SimplePolicyConfiguration.implies failed, implies set to 1", pce);
             // the following block is included as a debugging convenience
             if (implies != 0) {
                 implies = 1;
             }
         }
-        
+
         boolean doImplies = false;
         if (implies == 0) {
             doImplies = basePolicy.implies(domain, permission);
         }
+        doPrivilegedLog(FINEST, "implies = {0}, doImplies = {1}", implies, doImplies);
         if (!doImplies) {
-            SimplePolicyConfiguration.logAccessFailure(domain, permission);
+            logAccessFailure(domain, permission);
         }
-        
+
         return doImplies;
     }
 
@@ -174,7 +183,7 @@ public class SimplePolicyProvider extends Policy {
             // will enable permission caching of container, unless REUSE
             // property is set, and its value is not "true".
             String propValue = System.getProperty(REUSE);
-            boolean supportsReuse = (propValue == null ? true : Boolean.valueOf(propValue));
+            boolean supportsReuse = (propValue == null ? true : Boolean.parseBoolean(propValue));
             if (supportsReuse) {
                 if (PolicyContext.getHandlerKeys().contains(REUSE)) {
                     PolicyContext.getContext(REUSE);
@@ -182,16 +191,16 @@ public class SimplePolicyProvider extends Policy {
             }
             SimplePolicyConfiguration.refresh();
         } catch (PolicyContextException pce) {
-            SimplePolicyConfiguration.logException(Level.SEVERE, "refresh.failure", pce);
+            logException(Level.SEVERE, "Refresh failed.", pce);
             throw new IllegalStateException(pce);
         }
     }
-    
+
     /*
-     * NB: 
-     * Excluded permissions should be removed from the collections returned by getPermissions. 
-     * Permissions that imply excluded permissions should also be excluded. 
-     * 
+     * NB:
+     * Excluded permissions should be removed from the collections returned by getPermissions.
+     * Permissions that imply excluded permissions should also be excluded.
+     *
      * There is a potential semantic integrity issue if the excluded permissions have been
      * assigned to the protection domain. The calls to getPermissions and implies of SimplePolicyConfiguration remove
      * excluded permissions from the returned results.

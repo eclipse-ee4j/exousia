@@ -18,6 +18,7 @@
 package org.glassfish.exousia.modules.locked;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
@@ -53,7 +54,7 @@ import jakarta.security.jacc.WebUserDataPermission;
 
 /**
  * The methods of this interface are used by containers to create policy statements in a Policy provider.
- * 
+ *
  * <p>
  * An object that implements the PolicyConfiguration interface provides the policy statement configuration interface for
  * a corresponding policy context within the corresponding Policy provider.
@@ -65,9 +66,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     public static final int OPEN_STATE = 0;
     public static final int INSERVICE_STATE = 2;
     public static final int DELETED_STATE = 3;
-    
+
     private static final Permission setPolicyPermission = new SecurityPermission("setPolicy");
-    private String contextId;
+    private final String contextId;
     private int state = OPEN_STATE;
 
     // Excluded permissions
@@ -80,9 +81,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     private List<Role> roleTable;
 
     // Lock on this PolicyConfiguration onject
-    private ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
-    private Lock readLock = policyContextLock.readLock();
-    private Lock writeLock = policyContextLock.writeLock();
+    private final ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
+    private final Lock readLock = policyContextLock.readLock();
+    private final Lock writeLock = policyContextLock.writeLock();
 
     static {
         // Register a role mapper
@@ -94,7 +95,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     className = packageName + "." + "GlassfishRoleMapper";
                 }
 
-                Constructor<?> constructor = 
+                Constructor<?> constructor =
                     Thread.currentThread()
                           .getContextClassLoader()
                           .loadClass(className)
@@ -137,13 +138,13 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     protected SimplePolicyConfiguration(String contextID) {
         this.contextId = contextID;
     }
-    
-    
+
+
 
     // ### Public Policy Configuration Interfaces Start here ###
 
-    
-    
+
+
     /**
      * This method returns this object's policy context identifier.
      *
@@ -259,7 +260,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             assertStateIsOpen();
             if (permissions != null) {
                 for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
-                    getUncheckedPermissions().add((Permission) e.nextElement());
+                    getUncheckedPermissions().add(e.nextElement());
                 }
 
             }
@@ -325,7 +326,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             assertStateIsOpen();
             if (permissions != null) {
                 for (Enumeration<Permission> e = permissions.elements(); e.hasMoreElements();) {
-                    this.getExcludedPermissions().add((Permission) e.nextElement());
+                    this.getExcludedPermissions().add(e.nextElement());
                 }
 
             }
@@ -493,11 +494,11 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         } finally {
             readLock.unlock();
         }
-        
+
         /*
-         * If at this point, a simultaneous attempt is made to delete or commit this PolicyConfiguration, we could end up with a 
-         * corrupted link table. 
-         * 
+         * If at this point, a simultaneous attempt is made to delete or commit this PolicyConfiguration, we could end up with a
+         * corrupted link table.
+         *
          * Neither event is likely, but we should try to properly serialize those events.
          */
         SharedState.link(contextId, link.getContextID());
@@ -609,36 +610,36 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             readLock.unlock();
         }
     }
-    
+
     @Override
     public Map<String, PermissionCollection> getPerRolePermissions() {
         // TODO IMPLEMENT!
         return null;
     }
-    
+
     @Override
     public PermissionCollection getUncheckedPermissions() {
         if (uncheckedPermissions == null) {
             uncheckedPermissions = new Permissions();
         }
-        
+
         return uncheckedPermissions;
     }
-    
+
     @Override
     public PermissionCollection getExcludedPermissions() {
         if (excludedPermissions == null) {
             excludedPermissions = new Permissions();
         }
-        
+
         return excludedPermissions;
     }
-    
+
 
     // Internal Policy Configuration interfaces start here
     protected static SimplePolicyConfiguration getPolicyConfig(String pcid, boolean remove) throws PolicyContextException {
         SimplePolicyConfiguration simplePolicyConfiguration = SharedState.getConfig(pcid, remove);
-        
+
         simplePolicyConfiguration.writeLock.lock();
         try {
             if (remove) {
@@ -657,10 +658,10 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         if (simplePolicyConfiguration == null) {
             return false;
         }
-        
+
         return simplePolicyConfiguration.inService();
     }
-    
+
     protected static SimplePolicyConfiguration getPolicyConfig(String pcid) {
         return SharedState.lookupConfig(pcid);
     }
@@ -740,7 +741,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             if (t instanceof PolicyContextException) {
                 throw (PolicyContextException) t;
             }
-            
+
             throw new PolicyContextException(t);
         }
 
@@ -750,7 +751,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                 for (Role role : roleTable) {
                     role.setPrincipals(roleMapper.getPrincipalsInRole(contextId, role.getName()));
                 }
-                
+
                 /**
                  * JACC MR8 add handling for the any authenticated user role '**'
                  */
@@ -766,15 +767,15 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         }
     }
 
-    
+
     // ### Public Policy Enforcement Interfaces Start here ###
-    
-    
+
+
     /**
      * Evaluates the global policy and returns a PermissionCollection object specifying the set of permissions allowed for
      * code from the specified code source.
      *
-     * @param basePerms the collection of permissions to check 
+     * @param basePerms the collection of permissions to check
      * @param codesource the CodeSource associated with the caller. This encapsulates the original location of the code
      * (where the code came from) and the public key(s) of its signer.
      *
@@ -791,7 +792,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      * Evaluates the policy and returns a PermissionCollection object specifying the set of permissions allowed given the
      * characteristics of the protection domain.
      *
-     * @param basePerms the collection of permissions to check 
+     * @param basePerms the collection of permissions to check
      * @param domain the ProtectionDomain associated with the caller.
      *
      * @return the set of permissions allowed for the <i>domain</i> according to the policy.The returned set of permissions
@@ -820,14 +821,14 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         return policyConfiguration == null ? 0 : policyConfiguration.doImplies(domain, permission);
     }
 
-    
-    
+
+
     // ###  Internal Policy Enforcement Interfaces Start here ###
-    
-    
+
+
     private boolean permissionIsExcluded(Permission testedPermission) {
         boolean isExcluded = false;
-        
+
         if (hasExcludedPermissions()) {
             if (!getExcludedPermissions().implies(testedPermission)) {
                 /*
@@ -835,7 +836,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                  */
                 Enumeration<Permission> e = excludedPermissions.elements();
                 while (e.hasMoreElements()) {
-                    Permission excludedPerm = (Permission) e.nextElement();
+                    Permission excludedPerm = e.nextElement();
                     if (testedPermission.implies(excludedPerm)) {
                         isExcluded = true;
                         break;
@@ -847,7 +848,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             }
 
         }
-        
+
         return isExcluded;
     }
 
@@ -859,43 +860,27 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     private int doImplies(ProtectionDomain protectionDomain, Permission permission) throws PolicyContextException {
         readLock.lock();
-        int doesImplies = 0;
         try {
+            doPrivilegedLog(FINEST, "doImplies, roleTable: {0}, permission: {1}, protectionDomain: {2}", roleTable,
+                permission, protectionDomain);
             assertStateIsInService();
-
             if (permissionIsExcluded(permission)) {
-                doesImplies = -1;
-
+                return -1;
             } else if (getUncheckedPermissions().implies(permission)) {
-                doesImplies = 1;
-
+                return 1;
             } else if (roleTable != null) {
-
-                Principal principals[] = protectionDomain.getPrincipals();
-
+                Principal[] principals = protectionDomain.getPrincipals();
                 if (principals.length == 0) {
-                    doesImplies = 0;
-
+                    return 0;
                 } else {
-
                     for (Role role : roleTable) {
                         if (role.arePrincipalsInRole(principals) && role.implies(permission)) {
-                            doesImplies = 1;
-                            break;
+                            return 1;
                         }
-                        // Added as a per role debugging convenience
-                        if (doesImplies != 1) {
-                            doesImplies = 0;
-                        }
-                    }
-
-                    // Added as an all role debugging convenience
-                    if (doesImplies != 1) {
-                        doesImplies = 0;
                     }
                 }
             }
-            return doesImplies;
+            return 0;
         } catch (UnsupportedOperationException uso) {
             throw new PolicyContextException(uso);
         } finally {
@@ -991,14 +976,14 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     static void refresh() throws PolicyContextException {
     }
 
-    static void doPrivilegedLog(Level level, String msg, Object[] params) {
+    static void doPrivilegedLog(Level level, String msg, Object... params) {
         Logger logger = SharedState.getLogger();
-        
+
         if (logger.isLoggable(level)) {
             if (System.getSecurityManager() == null) {
                 logger.log(level, msg, params);
             } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                AccessController.doPrivileged(new PrivilegedAction<>() {
 
                     @Override
                     public Object run() {
@@ -1012,12 +997,12 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
 
     static void doPrivilegedLog(Level level, String msg, Throwable t) {
         Logger logger = SharedState.getLogger();
-        
+
         if (logger.isLoggable(level)) {
             if (System.getSecurityManager() == null) {
                 logger.log(level, msg, t);
             } else {
-                AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                AccessController.doPrivileged(new PrivilegedAction<>() {
 
                     @Override
                     public Object run() {
@@ -1029,32 +1014,35 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         }
     }
 
-    
+
     // ### Internal logging interfaces start here ###
-    
+
     static void logGetPermissionsFailure(Object o, Throwable t) {
-        doPrivilegedLog(INFO, "getPermissions.failure", new Object[] { PolicyContext.getContextID(), o });
-        doPrivilegedLog(INFO, "getPermissions.failure", t);
+        doPrivilegedLog(INFO, "getPermissions call failed for the policy context ID {0} and {1}",
+            new Object[] {PolicyContext.getContextID(), o});
+        doPrivilegedLog(INFO, "getPermissions call failed", t);
     }
 
     private static boolean permissionShouldBeLogged(Permission permission) {
-        return 
-            !(permission instanceof WebResourcePermission) && 
-            !(permission instanceof WebUserDataPermission) && 
-            !(permission instanceof MBeanPermission) && 
-            !(permission instanceof WebRoleRefPermission) && 
+        return
+            !(permission instanceof WebResourcePermission) &&
+            !(permission instanceof WebUserDataPermission) &&
+            !(permission instanceof MBeanPermission) &&
+            !(permission instanceof WebRoleRefPermission) &&
             !(permission instanceof EJBRoleRefPermission);
     }
 
     static void logAccessFailure(ProtectionDomain protectionDomain, Permission permission) {
         if (permissionShouldBeLogged(permission) || SharedState.getLogger().isLoggable(FINE)) {
-            doPrivilegedLog(FINE, "Domain.that.failed", new Object[] { PolicyContext.getContextID(), permission, protectionDomain });
+            doPrivilegedLog(FINE,
+                "Access refused for the policy context id {0}, permission {1} and protection domain {2}.",
+                PolicyContext.getContextID(), permission, protectionDomain);
         }
     }
 
     static void logException(Level level, String msg, Throwable t) {
-        doPrivilegedLog(level, msg, new Object[] { PolicyContext.getContextID() });
+        doPrivilegedLog(level, msg);
         doPrivilegedLog(level, msg, t);
     }
-  
+
 }
