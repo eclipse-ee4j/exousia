@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,17 +17,17 @@
 
 package org.glassfish.exousia.constraints.transformer;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
+import java.lang.System.Logger;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
-import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
+import static java.lang.System.Logger.Level.WARNING;
 
 /**
  * @author Harpreet Singh
@@ -35,19 +36,19 @@ import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
  * @author Arjan Tijms (refactoring)
  */
 public class PatternBuilder {
-    
-    private static final Logger logger = Logger.getLogger(PatternBuilder.class.getName());
+
+    private static final Logger LOG = System.getLogger(PatternBuilder.class.getName());
 
     private final int patternLength;
 
     private final Map<String, MethodValue> methodValues = new HashMap<>();
 
     boolean committed;
-    
+
     private final ConstraintValue otherConstraint;
-    
+
     private boolean irrelevantByQualifier;
-    
+
     private final StringBuilder urlPatternSpec;
 
     PatternBuilder(String urlPattern) {
@@ -63,15 +64,15 @@ public class PatternBuilder {
 
         urlPatternSpec.append(":" + urlPattern);
     }
-    
+
     ConstraintValue getOtherConstraint() {
         return otherConstraint;
     }
-    
+
     boolean isIrrelevantByQualifier() {
         return irrelevantByQualifier;
     }
-    
+
     String getUrlPatternSpec() {
         return urlPatternSpec.toString();
     }
@@ -85,9 +86,7 @@ public class PatternBuilder {
                 methodValue = new MethodValue(methodName, otherConstraint);
                 methodValues.put(methodName, methodValue);
 
-                if (logger.isLoggable(FINE)) {
-                    logger.log(FINE, "JACC: created MethodValue: " + methodValue);
-                }
+                LOG.log(TRACE, "created MethodValue: {0}", methodValue);
             }
 
             return methodValue;
@@ -264,18 +263,17 @@ public class PatternBuilder {
             if (otherIsUncovered || !uncoveredMethodSet.isEmpty()) {
                 String uncoveredMethods = MethodValue.getActions(uncoveredMethodSet);
                 Object[] args = new Object[] { urlPatternSpec, uncoveredMethods };
-
                 if (deny) {
                     if (otherIsUncovered) {
-                        logger.log(INFO, "Jakarta Authorization: For the URL pattern {0}, all but the following methods have been excluded: {1}", args);
+                        LOG.log(INFO, "For the URL pattern {0}, all but the following methods have been excluded: {1}", args);
                     } else {
-                        logger.log(INFO, "Jakarta Authorization: For the URL pattern {0}, the following methods have been excluded: {1}", args);
+                        LOG.log(INFO, "For the URL pattern {0}, the following methods have been excluded: {1}", args);
                     }
                 } else {
                     if (otherIsUncovered) {
-                        logger.log(WARNING, "Jakarta Authorization: For the URL pattern {0}, all but the following methods were uncovered: {1}", args);
+                        LOG.log(WARNING, "For the URL pattern {0}, all but the following methods were uncovered: {1}", args);
                     } else {
-                        logger.log(WARNING, "Jakarta Authorization: For the URL pattern {0}, the following methods were uncovered: {1}", args);
+                        LOG.log(WARNING, "For the URL pattern {0}, the following methods were uncovered: {1}", args);
                     }
                 }
             }

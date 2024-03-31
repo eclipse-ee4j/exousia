@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,22 +17,28 @@
 
 package org.glassfish.exousia.modules.locked;
 
+import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
+import jakarta.security.jacc.WebResourcePermission;
+import jakarta.security.jacc.WebRoleRefPermission;
+import jakarta.security.jacc.WebUserDataPermission;
 
+import java.lang.System.Logger;
 import java.security.CodeSource;
 import java.security.NoSuchAlgorithmException;
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.Policy;
 import java.security.ProtectionDomain;
-import java.util.logging.Level;
+import java.text.MessageFormat;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINEST;
-import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.doPrivilegedLog;
-import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.logAccessFailure;
-import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.logException;
+import javax.management.MBeanPermission;
+
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.INFO;
+import static java.lang.System.Logger.Level.TRACE;
+
 
 /**
  *
@@ -39,6 +46,7 @@ import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.log
  */
 public class SimplePolicyProvider extends Policy {
 
+    private static final Logger LOG = System.getLogger(SimplePolicyProvider.class.getName());
     private static final String REUSE = "java.security.Policy.supportsReuse";
     private Policy basePolicy;
 
@@ -86,8 +94,9 @@ public class SimplePolicyProvider extends Policy {
         PermissionCollection permissionCollection = basePolicy.getPermissions(codesource);
         try {
             permissionCollection = SimplePolicyConfiguration.getPermissions(permissionCollection, codesource);
-        } catch (PolicyContextException pce) {
-            SimplePolicyConfiguration.logGetPermissionsFailure(codesource, pce);
+        } catch (PolicyContextException e) {
+            LOG.log(INFO, () -> MessageFormat.format("getPermissions call failed for the policy context ID {0} and {1}",
+                PolicyContext.getContextID(), codesource), e);
         }
         return permissionCollection;
     }
@@ -110,8 +119,9 @@ public class SimplePolicyProvider extends Policy {
         PermissionCollection permissionCollection = basePolicy.getPermissions(domain);
         try {
             permissionCollection = SimplePolicyConfiguration.getPermissions(permissionCollection, domain);
-        } catch (PolicyContextException pce) {
-            SimplePolicyConfiguration.logGetPermissionsFailure(domain, pce);
+        } catch (PolicyContextException e) {
+            LOG.log(INFO, () -> MessageFormat.format("getPermissions call failed for the policy context ID {0} and {1}",
+                PolicyContext.getContextID(), domain), e);
         }
         return permissionCollection;
     }
@@ -144,28 +154,25 @@ public class SimplePolicyProvider extends Policy {
     }
 
     private boolean doImplies(ProtectionDomain domain, Permission permission) {
-        int implies = -1;
+        int implies = 1;
         try {
             implies = SimplePolicyConfiguration.implies(domain, permission);
-            doPrivilegedLog(FINEST, "implies = {0}", implies);
             if (implies > 0) {
+                LOG.log(TRACE, "SimplePolicyConfiguration returned implies = {0}, returning true.", implies);
                 return true;
             }
-        } catch (PolicyContextException pce) {
-            logException(FINE, "SimplePolicyConfiguration.implies failed, implies set to 1", pce);
-            // the following block is included as a debugging convenience
-            if (implies != 0) {
-                implies = 1;
-            }
+        } catch (PolicyContextException e) {
+            LOG.log(TRACE, "SimplePolicyConfiguration.implies failed.", e);
         }
 
         boolean doImplies = false;
         if (implies == 0) {
             doImplies = basePolicy.implies(domain, permission);
         }
-        doPrivilegedLog(FINEST, "implies = {0}, doImplies = {1}", implies, doImplies);
-        if (!doImplies) {
-            logAccessFailure(domain, permission);
+        LOG.log(TRACE, "Result - implies = {0}, doImplies = {1}", implies, doImplies);
+        if (!doImplies && permissionShouldBeLogged(permission)) {
+            LOG.log(DEBUG, "Access refused for the policy context id {0}, permission {1} and protection domain {2}.",
+                PolicyContext.getContextID(), permission, domain);
         }
 
         return doImplies;
@@ -191,9 +198,17 @@ public class SimplePolicyProvider extends Policy {
             }
             SimplePolicyConfiguration.refresh();
         } catch (PolicyContextException pce) {
-            logException(Level.SEVERE, "Refresh failed.", pce);
-            throw new IllegalStateException(pce);
+            throw new IllegalStateException("Refresh failed", pce);
         }
+    }
+
+    private static boolean permissionShouldBeLogged(Permission permission) {
+        return
+            !(permission instanceof WebResourcePermission) &&
+            !(permission instanceof WebUserDataPermission) &&
+            !(permission instanceof MBeanPermission) &&
+            !(permission instanceof WebRoleRefPermission) &&
+            !(permission instanceof EJBRoleRefPermission);
     }
 
     /*

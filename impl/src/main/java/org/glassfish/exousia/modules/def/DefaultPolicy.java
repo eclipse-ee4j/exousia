@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -13,11 +14,16 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
+
 package org.glassfish.exousia.modules.def;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.list;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.security.CodeSource;
 import java.security.Permission;
 import java.security.PermissionCollection;
@@ -27,29 +33,23 @@ import java.security.Principal;
 import java.security.ProtectionDomain;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
 
 import org.glassfish.exousia.spi.PrincipalMapper;
 
-import jakarta.security.jacc.PolicyConfiguration;
-import jakarta.security.jacc.PolicyConfigurationFactory;
-import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
+import static java.util.Arrays.asList;
+import static java.util.Collections.list;
 
 /**
  *
  * @author Arjan Tijms
  */
-public class DefaultPolicy
-    extends Policy {
+public class DefaultPolicy extends Policy {
 
-    private final static Logger logger = Logger
-        .getLogger(DefaultPolicy.class
-            .getName());
+    private static final Logger LOG = System.getLogger(DefaultPolicy.class.getName());
 
-    private Policy defaultPolicy = getDefaultPolicy();
+    private final Policy defaultPolicy = getDefaultPolicy();
 
     @Override
     public boolean implies(
@@ -58,7 +58,7 @@ public class DefaultPolicy
 
         PolicyConfiguration policyConfiguration =
                 getPolicyConfigurationFactory().getPolicyConfiguration();
-        
+
         PrincipalMapper roleMapper = ((DefaultPolicyConfiguration) policyConfiguration)
             .getRoleMapper();
 
@@ -147,7 +147,7 @@ public class DefaultPolicy
         PolicyConfiguration policyConfiguration =
                 getPolicyConfigurationFactory().getPolicyConfiguration();
         PrincipalMapper roleMapper = getRoleMapper(policyConfiguration);
-        
+
         PermissionCollection excludedPermissions = policyConfiguration
             .getExcludedPermissions();
 
@@ -219,7 +219,7 @@ public class DefaultPolicy
 
         PolicyConfiguration policyConfiguration;
             policyConfiguration = getPolicyConfigurationFactory().getPolicyConfiguration();
-        
+
         PermissionCollection excludedPermissions = policyConfiguration
             .getExcludedPermissions();
 
@@ -249,7 +249,7 @@ public class DefaultPolicy
     }
 
     // ### Private methods
-    
+
     private PolicyConfigurationFactory getPolicyConfigurationFactory() {
         try {
             return PolicyConfigurationFactory.getPolicyConfigurationFactory();
@@ -259,17 +259,15 @@ public class DefaultPolicy
     }
 
     private Policy getDefaultPolicy() {
-        Policy policy = Policy
-            .getPolicy();
+        Policy policy = Policy.getPolicy();
         if (policy instanceof DefaultPolicy) {
-            logger.warning(
-                "Cannot obtain default / previous policy.");
+            LOG.log(Level.WARNING, "Cannot obtain default / previous policy.");
             return null;
         }
 
         return policy;
     }
-    
+
     private PrincipalMapper getRoleMapper(PolicyConfiguration policyConfiguration) {
         return ((DefaultPolicyConfiguration) policyConfiguration).getRoleMapper();
     }

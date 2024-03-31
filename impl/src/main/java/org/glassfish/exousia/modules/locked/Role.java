@@ -116,12 +116,12 @@ public class Role {
             return true;
         }
 
-        LOG.log(Level.DEBUG, () -> "Known principals: "
-            + principals.stream().map(Principal::toString).collect(Collectors.joining(", ")));
         if (principals == null || principals.isEmpty()) {
             return false;
         }
 
+        LOG.log(Level.DEBUG, () -> "Known principals: "
+            + principals.stream().map(Principal::toString).collect(Collectors.joining(", ")));
         for (Principal principal : subject) {
             LOG.log(Level.DEBUG, "Checking principal: {0}", principal);
             if (principals.contains(principal)) {
