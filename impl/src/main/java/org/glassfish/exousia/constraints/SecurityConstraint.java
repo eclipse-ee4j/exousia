@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2020 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -13,20 +14,21 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
+
 package org.glassfish.exousia.constraints;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableList;
-import static java.util.Collections.unmodifiableSet;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Stream.concat;
-import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
+import static jakarta.servlet.annotation.ServletSecurity.TransportGuarantee.NONE;
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Stream.concat;
 
 public class SecurityConstraint {
 
@@ -72,6 +74,11 @@ public class SecurityConstraint {
         return rolesAllowed;
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[webResourceCollections: " + getWebResourceCollections()
+            + ", rolesAllowed: " + getRolesAllowed() + ", transportGuarantee: " + getTransportGuarantee() + "]";
+    }
 
 
     // ### Static utility methods that work on constraints

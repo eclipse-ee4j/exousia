@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,27 +17,26 @@
 
 package org.glassfish.exousia.modules.locked;
 
-import static java.util.logging.Level.WARNING;
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
 
+import java.lang.System.Logger;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.WARNING;
 
 /**
- *
  * @author monzillo
  */
 public class SharedState {
 
-    private static final Logger logger = Logger.getLogger(SharedState.class.getPackage().getName());
+    private static final Logger LOG = System.getLogger(SharedState.class.getName());
 
     // lock on the shared configTable and linkTable
     private static ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
@@ -45,10 +45,6 @@ public class SharedState {
     private static Map<String, SimplePolicyConfiguration> configTable = new HashMap<>();
     private static Map<String, Set<String>> linkTable = new HashMap<>();
 
-
-    static Logger getLogger() {
-        return logger;
-    }
 
     static SimplePolicyConfiguration lookupConfig(String pcid) {
         wLock.lock();
@@ -89,8 +85,7 @@ public class SharedState {
                     // Unknown policy context set on thread return null to allow checking to be
                     // performed with default context.
                     // Should repair improper setting of context by encompassing runtime.
-                    SimplePolicyConfiguration.logException(WARNING, "Invalid policy context id: " + contextId,
-                        new PolicyContextException());
+                    LOG.log(WARNING, "Invalid policy context id: {0}", contextId);
                 }
 
             } finally {
@@ -101,8 +96,7 @@ public class SharedState {
                     // Policy context set on thread is not in service return null to allow checking
                     // to be performed with default context.
                     // Should repair improper setting of context by encompassing runtime.
-                    SimplePolicyConfiguration.logException(Level.FINEST, "Invalid policy context state.",
-                        new PolicyContextException());
+                    LOG.log(DEBUG, "Invalid policy context state.");
                     simplePolicyConfiguration = null;
                 }
             }

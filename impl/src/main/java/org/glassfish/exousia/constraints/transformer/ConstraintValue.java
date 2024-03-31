@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,16 +17,16 @@
 
 package org.glassfish.exousia.constraints.transformer;
 
-import static java.util.logging.Level.FINE;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
+import java.lang.System.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Logger;
 
-import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
+import static java.lang.System.Logger.Level.DEBUG;
 
 /**
  * @author Harpreet Singh
@@ -35,16 +36,17 @@ import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
  */
 public class ConstraintValue {
 
-    private static final Logger logger = Logger.getLogger(ConstraintValue.class.getName());
-    
+    private static final Logger LOG = System.getLogger(ConstraintValue.class.getName());
+
     public static final String connectKeys[] = { "NONE", "INTEGRAL", "CONFIDENTIAL" };
 
     public static final int connectTypeNone = 1;
     static Map<String, Integer> connectHash = new HashMap<>();
     static {
-        for (int i = 0; i < connectKeys.length; i++)
+        for (int i = 0; i < connectKeys.length; i++) {
             connectHash.put(connectKeys[i], Integer.valueOf(1 << i));
-    };
+        }
+    }
 
     private boolean excluded;
     private boolean ignoreRoles;
@@ -52,7 +54,7 @@ public class ConstraintValue {
 
     private int connectSet;
 
-    
+
     void setRole(String role) {
         synchronized (roles) {
             if (!roles.contains(role)) {
@@ -68,7 +70,7 @@ public class ConstraintValue {
             }
         }
     }
-    
+
     public List<String> getRoles() {
         return roles;
     }
@@ -76,30 +78,30 @@ public class ConstraintValue {
     boolean isExcluded() {
         return excluded;
     }
-    
+
     boolean isUncovered() {
         if (excluded) {
             return false;
         }
-        
+
         return !ignoreRoles && roles.isEmpty() && connectSet == 0;
     }
-    
+
     boolean isAuthConstrained() {
         if (excluded) {
             return true;
         }
-        
+
         if (ignoreRoles || roles.isEmpty()) {
             return false;
         }
-        
+
         return true;
     }
-    
+
     void addConnectType(TransportGuarantee guarantee) {
         int b = connectTypeNone;
-        
+
         if (guarantee != null) {
             Integer bit = connectHash.get(guarantee.name());
             if (bit == null) {
@@ -111,19 +113,19 @@ public class ConstraintValue {
 
         connectSet |= b;
     }
-    
+
     boolean isConnectAllowed(int connectType) {
         if (excluded) {
             return false;
         }
-        
+
         return connectSet == 0 || containsConnectType(connectTypeNone) || containsConnectType(connectType);
     }
-    
+
     private boolean containsConnectType(int connectType) {
         return bitIsSet(connectSet, connectType);
     }
-    
+
     private static boolean bitIsSet(int map, int bit) {
         return (map & bit) == bit;
     }
@@ -132,26 +134,26 @@ public class ConstraintValue {
      * IgnoreRoleList is true if there was a security-constraint without an auth-constraint; such a constraint combines to
      * allow access without authentication.
      */
-    
+
 
     void setOutcome(Set<String> declaredRoles, Set<String> constraintRolesAllowed, TransportGuarantee transportGuarantee) {
-        
+
         // ### 1 Handle roles
-        
+
         if (constraintRolesAllowed == null) {
-            
+
             // No roles means unchecked: access is always granted
-            
+
             setPredefinedOutcome(true);
         } else if (constraintRolesAllowed.isEmpty()) {
-            
+
             // Empty roles means excluded: access is always denied
-            
+
             setPredefinedOutcome(false);
         } else {
-            
+
             // Non-empty roles means access is per role
-            
+
 
             // Tracks if the special "all Roles" role ("*") is present.
             boolean containsAllRoles = false;
@@ -177,18 +179,15 @@ public class ConstraintValue {
                 }
             }
         }
-            
-          
+
+
         // ### 2 Handle transport guarantee
-        
+
         addConnectType(transportGuarantee);
 
-        if (logger.isLoggable(FINE)) {
-            logger.log(FINE, "Jakarta Authorization: setOutcome yields: " + toString());
-        }
-
+        LOG.log(DEBUG, "setOutcome yields: {0}", this);
     }
-    
+
     void setPredefinedOutcome(boolean outcome) {
         if (!outcome) {
             excluded = true;
@@ -200,10 +199,10 @@ public class ConstraintValue {
     void setValue(ConstraintValue constraint) {
         excluded = constraint.excluded;
         ignoreRoles = constraint.ignoreRoles;
-        
+
         roles.clear();
         roles.addAll(constraint.roles);
-        
+
         connectSet = constraint.connectSet;
     }
 
@@ -213,14 +212,14 @@ public class ConstraintValue {
         for (String role : roles) {
             rolesBuilder.append(" ").append(role);
         }
-        
+
         StringBuilder transportsBuilder = new StringBuilder("transports: ");
         for (int i = 0; i < connectKeys.length; i++) {
             if (isConnectAllowed(1 << i)) {
                 transportsBuilder.append(" ").append(connectKeys[i]);
             }
         }
-        
+
         return " ConstraintValue ( " + " excluded: " + excluded + " ignoreRoleList: " + ignoreRoles + rolesBuilder + transportsBuilder + " ) ";
     }
 
@@ -228,5 +227,5 @@ public class ConstraintValue {
      * IgnoreRoleList is true if there was a security-constraint without an auth-constraint; such a constraint combines to
      * allow access without authentication.
      */
-    
+
 }

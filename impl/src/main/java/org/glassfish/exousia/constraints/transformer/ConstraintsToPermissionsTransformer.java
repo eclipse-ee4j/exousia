@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,10 +17,11 @@
 
 package org.glassfish.exousia.constraints.transformer;
 
-import static java.util.Collections.list;
-import static java.util.logging.Level.FINE;
-import static org.glassfish.exousia.constraints.transformer.MethodValue.encodeMethodsToBits;
+import jakarta.security.jacc.WebResourcePermission;
+import jakarta.security.jacc.WebUserDataPermission;
+import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
 
+import java.lang.System.Logger;
 import java.security.Permission;
 import java.security.Permissions;
 import java.util.BitSet;
@@ -29,15 +31,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.logging.Logger;
+import java.util.function.Consumer;
 
 import org.glassfish.exousia.constraints.SecurityConstraint;
 import org.glassfish.exousia.constraints.WebResourceCollection;
 import org.glassfish.exousia.permissions.JakartaPermissions;
 
-import jakarta.security.jacc.WebResourcePermission;
-import jakarta.security.jacc.WebUserDataPermission;
-import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.TRACE;
+import static org.glassfish.exousia.constraints.transformer.MethodValue.encodeMethodsToBits;
 
 
 /**
@@ -48,8 +50,8 @@ import jakarta.servlet.annotation.ServletSecurity.TransportGuarantee;
  */
 public class ConstraintsToPermissionsTransformer {
 
-    static final Logger logger = Logger.getLogger(ConstraintsToPermissionsTransformer.class.getName());
-    
+    private static final Logger LOG = System.getLogger(ConstraintsToPermissionsTransformer.class.getName());
+
     static final String CLASS_NAME = ConstraintsToPermissionsTransformer.class.getSimpleName();
 
     /* Changed to order default pattern / below extension */
@@ -62,16 +64,13 @@ public class ConstraintsToPermissionsTransformer {
     }
 
     public static JakartaPermissions createResourceAndDataPermissions(Set<String> declaredRoles, boolean isDenyUncoveredHttpMethods, List<SecurityConstraint> securityConstraints) {
-        if (logger.isLoggable(FINE)) {
-            logger.entering(ConstraintsToPermissionsTransformer.class.getSimpleName(), "createResourceAndDataPermissions");
-            logger.log(FINE, "Jakarta Authorization: constraint translation");
-        }
-        
+        LOG.log(DEBUG, "Jakarta Authorization: constraint translation");
+
         // Create web resource and data permissions from constraints.
-        
+
         // This happens in two stages. We'll first create intermediate pattern builders. Then from the pattern builders we
         // create the target permissions.
-        
+
 
         // ### Stage 1 ###
 
@@ -87,28 +86,16 @@ public class ConstraintsToPermissionsTransformer {
 
         JakartaPermissions jakartaPermissions = intermediatePatternsToPermissions(patterns, isDenyUncoveredHttpMethods);
 
-        
-        // ### Log until there's nothing left to log ###
-
-        logExcludedUncheckedPermissionsWritten(jakartaPermissions.getExcluded(), jakartaPermissions.getUnchecked());
-
-        // Log the generated per role permission
-        for (Entry<String, Permissions> roleEntry : jakartaPermissions.getPerRole().entrySet()) {
-            logPerRolePermissionsWritten(roleEntry.getKey(), roleEntry.getValue());
+        if (LOG.isLoggable(DEBUG)) {
+            logPermissions(jakartaPermissions);
         }
 
-        if (logger.isLoggable(FINE)) {
-            logger.exiting(CLASS_NAME, "processConstraints");
-        }
-        
         return jakartaPermissions;
     }
 
     private static Collection<PatternBuilder> constraintsToIntermediatePatterns(Set<String> declaredRoles, List<SecurityConstraint> securityConstraints) {
-        if (logger.isLoggable(FINE)) {
-            logger.entering(CLASS_NAME, "parseConstraints");
-        }
-
+        LOG.log(TRACE, "constraintsToIntermediatePatterns(declaredRoles={0}, securityConstraints={1})", declaredRoles,
+            securityConstraints);
         Map<String, PatternBuilder> patternBuilderMap = new HashMap<>();
 
         // Seed the map with the default pattern; the default pattern will not be "committed", unless a constraint is
@@ -118,40 +105,38 @@ public class ConstraintsToPermissionsTransformer {
         // Iterate over security constraints
         for (SecurityConstraint securityConstraint : securityConstraints) {
 
-            logger.fine("Jakarta Authorization: constraint translation: begin parsing security constraint");
+            LOG.log(TRACE, "Constraint translation: begin parsing security constraint");
 
             Set<String> constraintRolesAllowed = securityConstraint.getRolesAllowed();
             TransportGuarantee transportGuarantee = securityConstraint.getTransportGuarantee();
-            
+
             for (WebResourceCollection webResourceCollection : securityConstraint.getWebResourceCollections()) {
 
-                logger.fine("Jakarta Authorization: constraint translation: begin parsing web resource collection");
-    
+                LOG.log(TRACE, "Constraint translation: begin parsing web resource collection");
+
                 // Enumerate over URLPatterns within collection
                 for (String urlPattern :  webResourceCollection.getUrlPatterns()) {
-                    
+
                     // FIX TO BE CONFIRMED (will we ever?)
                     urlPattern = urlPattern.replaceAll(":", "%3A");
-    
-                    if (logger.isLoggable(FINE)) {
-                        logger.fine("Jakarta Authorization: constraint translation: process url pattern: " + urlPattern);
-                    }
-    
+
+                    LOG.log(DEBUG, "Constraint translation: process url pattern: {0}", urlPattern);
+
                     // Determine if pattern is already in map
                     PatternBuilder patternBuilder = patternBuilderMap.get(urlPattern);
-    
+
                     // Apply new patterns to map
                     if (patternBuilder == null) {
                         patternBuilder = new PatternBuilder(urlPattern);
-    
+
                         // Iterate over patterns in map
                         for (Entry<String, PatternBuilder> patternBuilderEntry : patternBuilderMap.entrySet()) {
-    
+
                             String otherUrl = patternBuilderEntry.getKey();
-    
+
                             int otherUrlType = patternType(otherUrl);
                             switch (patternType(urlPattern)) {
-    
+
                             // If the new url/pattern is a path-prefix pattern, it must be qualified by every
                             // different (from it) path-prefix pattern (in the map) that is implied by the new
                             // pattern, and every exact pattern (in the map) that is implied by the new URL.
@@ -162,7 +147,7 @@ public class ConstraintsToPermissionsTransformer {
                             //
                             // Note that we know that the new pattern does not exist in the map, thus we know that the
                             // new pattern is different from any existing path prefix pattern.
-    
+
                             case PREFIX_MAPPING:
                                 if ((otherUrlType == PREFIX_MAPPING || otherUrlType == EXACT_MAPPING) && implies(urlPattern, otherUrl)) {
                                     patternBuilder.addQualifier(otherUrl);
@@ -172,7 +157,7 @@ public class ConstraintsToPermissionsTransformer {
                                     patternBuilderEntry.getValue().addQualifier(urlPattern);
                                 }
                                 break;
-    
+
                             // If the new pattern is an extension pattern, it must be qualified by every path-prefix
                             // pattern (in the map), and every exact pattern (in the map) that is implied by
                             // the new pattern.
@@ -186,7 +171,7 @@ public class ConstraintsToPermissionsTransformer {
                                     patternBuilderEntry.getValue().addQualifier(urlPattern);
                                 }
                                 break;
-    
+
                             // If the new pattern is the default pattern it must be qualified by every other pattern
                             // in the map.
                             case DEFAULT_MAPPING:
@@ -194,7 +179,7 @@ public class ConstraintsToPermissionsTransformer {
                                     patternBuilder.addQualifier(otherUrl);
                                 }
                                 break;
-    
+
                             // If the new pattern is an exact pattern, it is not be qualified, but it must be added as
                             // as a qualifier to the default pattern, and to every path-prefix or extension pattern (in
                             // the map) that implies the new pattern.
@@ -210,59 +195,44 @@ public class ConstraintsToPermissionsTransformer {
                                 break;
                             }
                         }
-    
+
                         // Add the new pattern and its pattern spec builder to the map
                         patternBuilderMap.put(urlPattern, patternBuilder);
                     }
-    
+
                     BitSet methods = encodeMethodsToBits(webResourceCollection.getHttpMethods());
-    
+
                     BitSet omittedMethods = null;
                     if (methods.isEmpty()) {
                         omittedMethods = encodeMethodsToBits(webResourceCollection.getHttpMethodOmissions());
                     }
-    
+
                     // Set and commit the method outcomes on the pattern builder
                     //
                     // Note that an empty omitted method set is used to represent
                     // the set of all HTTP methods
                     patternBuilder.setMethodOutcomes(declaredRoles, constraintRolesAllowed, transportGuarantee, methods, omittedMethods);
-    
-                    if (logger.isLoggable(FINE)) {
-                        logger.fine("Jakarta Authorization: constraint translation: end processing url pattern: " + urlPattern);
-                    }
+
+                    LOG.log(TRACE, "Constraint translation: end processing url pattern: {0}", urlPattern);
                 }
-    
-                logger.fine("Jakarta Authorization: constraint translation: end parsing web resource collection");
             }
-
-            logger.fine("Jakarta Authorization: constraint translation: end parsing security constraint");
-        }
-
-        if (logger.isLoggable(FINE)) {
-            logger.exiting(CLASS_NAME, "parseConstraints");
         }
 
         return patternBuilderMap.values();
     }
-    
+
     private static JakartaPermissions intermediatePatternsToPermissions(Collection<PatternBuilder> patterns, boolean isDenyUncoveredHttpMethods) {
-        logger.log(FINE, () ->
-            "Jakarta Authorization: constraint capture: begin processing qualified url patterns" +
-            " - uncovered http methods will be " +
+        LOG.log(DEBUG,
+            "Constraint capture: begin processing qualified url patterns - uncovered http methods will be {0}",
             (isDenyUncoveredHttpMethods ? "denied" : "permitted"));
-        
-        
+
         JakartaPermissions jakartaPermissions = new JakartaPermissions();
-        
+
         for (PatternBuilder patternBuilder : patterns) {
             if (!patternBuilder.isIrrelevantByQualifier()) {
 
                 String urlPatternSpec = patternBuilder.getUrlPatternSpec();
-
-                if (logger.isLoggable(FINE)) {
-                    logger.fine("Jakarta Authorization: constraint capture: urlPattern: " + urlPatternSpec);
-                }
+                LOG.log(DEBUG, "Constraint capture: urlPattern: {0}", urlPatternSpec);
 
                 // Handle uncovered methods
                 patternBuilder.handleUncovered(isDenyUncoveredHttpMethods);
@@ -280,7 +250,7 @@ public class ConstraintsToPermissionsTransformer {
                 handleConnections(jakartaPermissions.getUnchecked(), patternBuilder, urlPatternSpec);
             }
         }
-        
+
         return jakartaPermissions;
     }
 
@@ -303,9 +273,7 @@ public class ConstraintsToPermissionsTransformer {
         collection.add(new WebResourcePermission(name, actions));
         collection.add(new WebUserDataPermission(name, actions));
 
-        if (logger.isLoggable(FINE)) {
-            logger.fine("Jakarta Authorization: constraint capture: adding excluded methods: " + actions);
-        }
+        LOG.log(DEBUG, "Constraint capture: adding excluded methods: {0}", actions);
     }
 
     private static void handlePerRole(Map<String, Permissions> map, PatternBuilder patternBuilder, String urlPatternSpec) {
@@ -368,9 +336,7 @@ public class ConstraintsToPermissionsTransformer {
 
         collection.add(new WebResourcePermission(urlPatternSpec, httpMethodSpec));
 
-        if (logger.isLoggable(FINE)) {
-            logger.fine("Jakarta Authorization: constraint capture: adding unchecked (for authorization) methods: " + httpMethodSpec);
-        }
+        LOG.log(DEBUG, "Constraint capture: adding unchecked (for authorization) methods: {0}", httpMethodSpec);
     }
 
     private static void handleConnections(Permissions permissions, PatternBuilder patternBuilder, String name) {
@@ -422,11 +388,9 @@ public class ConstraintsToPermissionsTransformer {
 
             permissions.add(new WebUserDataPermission(name, combinedActions));
 
-            if (logger.isLoggable(FINE)) {
-                logger.fine(
-                    "Jakarta Authorization: constraint capture: adding methods that accept connections with protection: " +
-                    transport + " methods: " + actions);
-            }
+            LOG.log(DEBUG,
+                "Constraint capture: adding methods that accept connections with protection: {0} methods: {1}",
+                transport, actions);
         }
     }
 
@@ -491,34 +455,30 @@ public class ConstraintsToPermissionsTransformer {
         roleMap.computeIfAbsent(roleName, e -> new Permissions())
                .add(permission);
 
-        if (logger.isLoggable(FINE)) {
-            logger.fine("Jakarta Authorization: constraint capture: adding methods to role: " + roleName + " methods: " + permission.getActions());
-        }
+        LOG.log(DEBUG, "Constraint capture: adding methods to role: {0} methods: {1}", roleName, permission.getActions());
     }
 
-    private static void logExcludedUncheckedPermissionsWritten(Permissions excluded, Permissions unchecked) {
-        if (logger.isLoggable(FINE)) {
-            logger.fine("Jakarta Authorization: constraint capture: end processing qualified url patterns");
-
-            for (Permission permission :  list(excluded.elements())) {
-                logger.fine("Jakarta Authorization: permission(excluded) type: " + permissionType(permission) + " name: " + permission.getName() + " actions: " + permission.getActions());
-            }
-
-            for (Permission permission :  list(unchecked.elements())) {
-                logger.fine("Jakarta Authorization: permission(unchecked) type: " + permissionType(permission) + " name: " + permission.getName() + " actions: " + permission.getActions());
-            }
+    private static void logPermissions(JakartaPermissions permissions) {
+        final StringBuilder message = new StringBuilder();
+        message.append("Resolved permissions:");
+        message.append("\n  Exclusions:");
+        permissions.getExcluded().elementsAsStream().forEach(toMessageElement(message));
+        message.append("\n  Unchecked:");
+        permissions.getUnchecked().elementsAsStream().forEach(toMessageElement(message));
+        message.append("\n  Checked:");
+        for (Entry<String, Permissions> roleEntry : permissions.getPerRole().entrySet()) {
+            message.append("\n    Role ").append(roleEntry.getKey()).append(':');
+            roleEntry.getValue().elementsAsStream().forEach(toMessageElement(message));
         }
+
+        LOG.log(DEBUG, message);
     }
 
-    private static void logPerRolePermissionsWritten(String role, Permissions permissions) {
-        if (logger.isLoggable(FINE)) {
-            for (Permission permission :  list(permissions.elements())) {
-                logger.fine("Jakarta Authorization: permission(" + role + ") type: " + permissionType(permission) + " name: " + permission.getName() + " actions: " + permission.getActions());
-            }
-
-        }
+    private static Consumer<? super Permission> toMessageElement(final StringBuilder message) {
+        return permission -> message.append("\n    type: ").append(permissionType(permission)).append(", name: ")
+            .append(permission.getName()).append(", actions: ").append(permission.getActions());
     }
-    
+
     private static String permissionType(Permission permission) {
         return permission instanceof WebResourcePermission ? "WRP  " : "WUDP ";
     }

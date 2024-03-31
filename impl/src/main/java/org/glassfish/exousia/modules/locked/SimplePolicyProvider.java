@@ -21,17 +21,15 @@ import jakarta.security.jacc.Policy;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 
+import java.lang.System.Logger;
 import java.security.Permission;
 import java.security.PermissionCollection;
-import java.util.logging.Level;
 
 import javax.security.auth.Subject;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.FINEST;
-import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.doLog;
-import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.logAccessFailure;
-import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.logException;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.TRACE;
+
 
 /**
  *
@@ -39,6 +37,7 @@ import static org.glassfish.exousia.modules.locked.SimplePolicyConfiguration.log
  */
 public class SimplePolicyProvider implements Policy {
 
+    private static final Logger LOG = System.getLogger(SimplePolicyProvider.class.getName());
     private static final String REUSE = "java.security.Policy.supportsReuse";
 
     /**
@@ -81,28 +80,21 @@ public class SimplePolicyProvider implements Policy {
     }
 
     private boolean doImplies(Permission permissionToBeChecked, Subject subject) {
-        int implies = -1;
+        int implies = 1;
         try {
             implies = SimplePolicyConfiguration.implies(permissionToBeChecked, subject);
-            doLog(FINEST, "implies = {0}", implies);
             if (implies > 0) {
+                LOG.log(TRACE, "SimplePolicyConfiguration returned implies = {0}, returning true.", implies);
                 return true;
             }
-        } catch (PolicyContextException pce) {
-            logException(FINE, "SimplePolicyConfiguration.implies failed, implies set to 1", pce);
-            // the following block is included as a debugging convenience
-            if (implies != 0) {
-                implies = 1;
-            }
+        } catch (PolicyContextException e) {
+            LOG.log(TRACE, "SimplePolicyConfiguration.implies failed.", e);
         }
 
-        boolean doImplies = false;
-        doLog(FINEST, "implies = {0}, doImplies = {1}", implies, doImplies);
-        if (!doImplies) {
-            logAccessFailure(permissionToBeChecked, subject);
-        }
+        LOG.log(DEBUG, "Access refused for the policy context id {0}, permission {1} and subject {2}.",
+            PolicyContext.getContextID(), permissionToBeChecked, subject);
 
-        return doImplies;
+        return false;
     }
 
     /**
@@ -124,8 +116,7 @@ public class SimplePolicyProvider implements Policy {
             }
             SimplePolicyConfiguration.refresh();
         } catch (PolicyContextException pce) {
-            logException(Level.SEVERE, "Refresh failed.", pce);
-            throw new IllegalStateException(pce);
+            throw new IllegalStateException("Refresh failed", pce);
         }
     }
 
