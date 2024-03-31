@@ -18,6 +18,7 @@
 package org.glassfish.exousia.modules.locked;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.SEVERE;
 
@@ -62,7 +63,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     public static final int INSERVICE_STATE = 2;
     public static final int DELETED_STATE = 3;
 
-    private String contextId;
+    private final String contextId;
     private int state = OPEN_STATE;
 
     // Excluded permissions
@@ -75,9 +76,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     private List<Role> roleTable;
 
     // Lock on this PolicyConfiguration onject
-    private ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
-    private Lock readLock = policyContextLock.readLock();
-    private Lock writeLock = policyContextLock.writeLock();
+    private final ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
+    private final Lock readLock = policyContextLock.readLock();
+    private final Lock writeLock = policyContextLock.writeLock();
 
     static {
         // Register a role mapper
@@ -834,43 +835,27 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     private int doImplies(Permission permissionToBeChecked, Subject subject) throws PolicyContextException {
         readLock.lock();
-        int doesImplies = 0;
         try {
+            doLog(FINEST, "doImplies, roleTable: {0}, permission: {1}, subject: {2}", roleTable,
+                permissionToBeChecked, subject);
             assertStateIsInService();
 
             if (permissionIsExcluded(permissionToBeChecked)) {
-                doesImplies = -1;
-
+                return -1;
             } else if (getUncheckedPermissions().implies(permissionToBeChecked)) {
-                doesImplies = 1;
-
+                return 1;
             } else if (roleTable != null) {
-
                 Principal principals[] = subject.getPrincipals().toArray(Principal[]::new);
-
                 if (principals.length == 0) {
-                    doesImplies = 0;
-
-                } else {
-
-                    for (Role role : roleTable) {
-                        if (role.arePrincipalsInRole(principals) && role.implies(permissionToBeChecked)) {
-                            doesImplies = 1;
-                            break;
-                        }
-                        // Added as a per role debugging convenience
-                        if (doesImplies != 1) {
-                            doesImplies = 0;
-                        }
-                    }
-
-                    // Added as an all role debugging convenience
-                    if (doesImplies != 1) {
-                        doesImplies = 0;
+                    return 0;
+                }
+                for (Role role : roleTable) {
+                    if (role.arePrincipalsInRole(principals) && role.implies(permissionToBeChecked)) {
+                        return 1;
                     }
                 }
             }
-            return doesImplies;
+            return 0;
         } catch (UnsupportedOperationException uso) {
             throw new PolicyContextException(uso);
         } finally {
@@ -966,7 +951,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     static void refresh() throws PolicyContextException {
     }
 
-    static void doLog(Level level, String msg, Object[] params) {
+    static void doLog(Level level, String msg, Object... params) {
         Logger logger = SharedState.getLogger();
 
         if (logger.isLoggable(level)) {
@@ -975,7 +960,7 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
         }
     }
 
-    static void doPrivilegedLog(Level level, String msg, Throwable t) {
+    static void doLog(Level level, String msg, Throwable t) {
         Logger logger = SharedState.getLogger();
 
         if (logger.isLoggable(level)) {
@@ -988,8 +973,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     // ### Internal logging interfaces start here ###
 
     static void logGetPermissionsFailure(Object o, Throwable t) {
-        doLog(INFO, "getPermissions.failure", new Object[] { PolicyContext.getContextID(), o });
-        doPrivilegedLog(INFO, "getPermissions.failure", t);
+        doLog(INFO, "getPermissions call failed for the policy context ID {0} and {1}",
+            new Object[] {PolicyContext.getContextID(), o});
+        doLog(INFO, "getPermissions call failed", t);
     }
 
     private static boolean permissionShouldBeLogged(Permission permission) {
@@ -1001,15 +987,17 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
             !(permission instanceof EJBRoleRefPermission);
     }
 
-    static void logAccessFailure(Permission permissionToBeChecked, Subject subject) {
-        if (permissionShouldBeLogged(permissionToBeChecked) || SharedState.getLogger().isLoggable(FINE)) {
-            doLog(FINE, "Domain.that.failed", new Object[] { PolicyContext.getContextID(), permissionToBeChecked, subject });
+    static void logAccessFailure(Permission permission, Subject subject) {
+        if (permissionShouldBeLogged(permission) || SharedState.getLogger().isLoggable(FINE)) {
+            doLog(FINE,
+                "Access refused for the policy context id {0}, permission {1} and subject {2}.",
+                PolicyContext.getContextID(), permission, subject);
         }
     }
 
     static void logException(Level level, String msg, Throwable t) {
-        doLog(level, msg, new Object[] { PolicyContext.getContextID() });
-        doPrivilegedLog(level, msg, t);
+        doLog(level, msg);
+        doLog(level, msg, t);
     }
 
 }

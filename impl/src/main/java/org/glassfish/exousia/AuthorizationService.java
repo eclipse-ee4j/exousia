@@ -22,6 +22,7 @@ import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
 import static jakarta.security.jacc.PolicyContext.SUBJECT;
 import static java.util.Collections.emptySet;
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.SEVERE;
 import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
 import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
@@ -544,18 +545,25 @@ public class AuthorizationService {
 
 
     boolean checkPermission(Permission permissionToBeChecked) {
+        logger.log(FINEST, "checkPermission(permissionToBeChecked={0})", permissionToBeChecked);
         return getPolicy().implies(permissionToBeChecked);
     }
 
     boolean checkPermission(Permission permissionToBeChecked, Subject subject) {
+        logger.log(FINEST, "checkPermission(permissionToBeChecked={0}, subject={1})",
+            new Object[] {permissionToBeChecked, subject});
         return getPolicy().implies(permissionToBeChecked, subject != null? subject : new Subject());
     }
 
     boolean checkPermission(Permission permissionToBeChecked, Set<Principal> principals) {
+        logger.log(FINEST, "checkPermission(permissionToBeChecked={0}, principals={1})",
+            new Object[] {permissionToBeChecked, principals});
         return getPolicy().implies(permissionToBeChecked, principals != null? principals : emptySet());
     }
 
     boolean checkPermissionScoped(Permission permissionToBeChecked, Set<Principal> principals) {
+        logger.log(FINEST, "checkPermissionScoped(permissionToBeChecked={0}, principals={1})",
+            new Object[] {permissionToBeChecked, principals});
         String oldContextId = null;
         try {
             oldContextId = setThreadContextId(contextId);
@@ -683,7 +691,7 @@ public class AuthorizationService {
     }
 
     @FunctionalInterface
-    public static interface ThrowableSupplier<T> {
+    public interface ThrowableSupplier<T> {
         T get() throws Throwable;
     }
 

@@ -35,7 +35,7 @@ import jakarta.security.jacc.PolicyContextException;
  * @author monzillo
  */
 public class SharedState {
-    
+
     private static final Logger logger = Logger.getLogger(SharedState.class.getPackage().getName());
 
     // lock on the shared configTable and linkTable
@@ -44,7 +44,7 @@ public class SharedState {
     private static Lock wLock = rwLock.writeLock();
     private static Map<String, SimplePolicyConfiguration> configTable = new HashMap<>();
     private static Map<String, Set<String>> linkTable = new HashMap<>();
-    
+
 
     static Logger getLogger() {
         return logger;
@@ -74,23 +74,23 @@ public class SharedState {
         } finally {
             wLock.unlock();
         }
-        
+
         return simplePolicyConfiguration;
     }
 
     static SimplePolicyConfiguration getActiveConfig() throws PolicyContextException {
-        String contectId = PolicyContext.getContextID();
+        String contextId = PolicyContext.getContextID();
         SimplePolicyConfiguration simplePolicyConfiguration = null;
-        if (contectId != null) {
+        if (contextId != null) {
             rLock.lock();
             try {
-                simplePolicyConfiguration = configTable.get(contectId);
+                simplePolicyConfiguration = configTable.get(contextId);
                 if (simplePolicyConfiguration == null) {
-                    /*
-                     * unknown policy context set on thread return null to allow checking to be performed with default context. Should
-                     * repair improper setting of context by encompassing runtime.
-                     */
-                    SimplePolicyConfiguration.logException(WARNING, "invalid policy context id", new PolicyContextException());
+                    // Unknown policy context set on thread return null to allow checking to be
+                    // performed with default context.
+                    // Should repair improper setting of context by encompassing runtime.
+                    SimplePolicyConfiguration.logException(WARNING, "Invalid policy context id: " + contextId,
+                        new PolicyContextException());
                 }
 
             } finally {
@@ -98,11 +98,11 @@ public class SharedState {
             }
             if (simplePolicyConfiguration != null) {
                 if (!simplePolicyConfiguration.inService()) {
-                    /*
-                     * policy context set on thread is not in service return null to allow checking to be performed with default context.
-                     * Should repair improper setting of context by encompassing runtime.
-                     */
-                    SimplePolicyConfiguration.logException(Level.FINEST, "invalid policy context state", new PolicyContextException());
+                    // Policy context set on thread is not in service return null to allow checking
+                    // to be performed with default context.
+                    // Should repair improper setting of context by encompassing runtime.
+                    SimplePolicyConfiguration.logException(Level.FINEST, "Invalid policy context state.",
+                        new PolicyContextException());
                     simplePolicyConfiguration = null;
                 }
             }
@@ -141,11 +141,11 @@ public class SharedState {
             if (otherLinkSet == null) {
                 throw new RuntimeException("Linked policy configuration (" + otherId + ") does not exist");
             }
-            
+
             for (String nextid : otherLinkSet) {
                 // Add the id to this linkSet
                 linkSet.add(nextid);
-                
+
                 // Replace the linkset mapped to all the contexts being linked
                 // to this context, with this linkset.
                 linkTable.put(nextid, linkSet);
@@ -166,7 +166,7 @@ public class SharedState {
         wLock.lock();
         try { // get the linkSet corresponding to this context.
             Set<String> linkSet = linkTable.get(contextId);
-            
+
             // Remove this context id from the linkSet (which may be shared
             // with other contexts), and unmap the linkSet from this context.
             if (linkSet != null) {
