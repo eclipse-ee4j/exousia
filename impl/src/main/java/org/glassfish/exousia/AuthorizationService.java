@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -17,11 +17,19 @@
 
 package org.glassfish.exousia;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.SEVERE;
-import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
-import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
+import jakarta.security.jacc.EJBMethodPermission;
+import jakarta.security.jacc.EJBRoleRefPermission;
+import jakarta.security.jacc.PolicyConfiguration;
+import jakarta.security.jacc.PolicyConfigurationFactory;
+import jakarta.security.jacc.PolicyContext;
+import jakarta.security.jacc.PolicyContextException;
+import jakarta.security.jacc.WebResourcePermission;
+import jakarta.security.jacc.WebRoleRefPermission;
+import jakarta.security.jacc.WebUserDataPermission;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpServletRequest;
 
+import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.CodeSource;
@@ -39,7 +47,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.logging.Logger;
 
 import javax.security.auth.Subject;
 
@@ -50,17 +57,10 @@ import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
 import org.glassfish.exousia.permissions.JakartaPermissions;
 import org.glassfish.exousia.spi.PrincipalMapper;
 
-import jakarta.security.jacc.EJBMethodPermission;
-import jakarta.security.jacc.EJBRoleRefPermission;
-import jakarta.security.jacc.PolicyConfiguration;
-import jakarta.security.jacc.PolicyConfigurationFactory;
-import jakarta.security.jacc.PolicyContext;
-import jakarta.security.jacc.PolicyContextException;
-import jakarta.security.jacc.WebResourcePermission;
-import jakarta.security.jacc.WebRoleRefPermission;
-import jakarta.security.jacc.WebUserDataPermission;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.http.HttpServletRequest;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
+import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
+import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
 
 /**
  *
@@ -68,7 +68,7 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 public class AuthorizationService {
 
-    static final Logger logger = Logger.getLogger(AuthorizationService.class.getName());
+    private static final Logger LOG = System.getLogger(AuthorizationService.class.getName());
 
     private static final boolean isSecMgrOff = System.getSecurityManager() == null;
 
@@ -367,7 +367,7 @@ public class AuthorizationService {
                 // If this is not true, the call to commit will not result in the correct
                 // policy statements being made available to the policy module.
                 policyConfiguration.commit();
-                logger.log(FINE, () -> "Jakarta Authorization: committed policy for context: " + contextId);
+                LOG.log(DEBUG, "Committed policy for context: {0}", contextId);
             }
 
             policy.refresh();
@@ -378,15 +378,16 @@ public class AuthorizationService {
 
     public static void commitPolicy(String contextId) {
         try {
-            if (!PolicyConfigurationFactory.getPolicyConfigurationFactory().inService(contextId)) {
+            PolicyConfigurationFactory configurationFactory = PolicyConfigurationFactory.getPolicyConfigurationFactory();
+            if (!configurationFactory.inService(contextId)) {
 
                 // Note that it is presumed that the policyConfiguration exists, and that
                 // it is populated with the desired policy statements.
                 //
                 // If this is not true, the call to commit will not result in the correct
                 // policy statements being made available to the policy module.
-                PolicyConfigurationFactory.getPolicyConfigurationFactory().getPolicyConfiguration(contextId, false).commit();
-                logger.log(FINE, () -> "Jakarta Authorization: committed policy for context: " + contextId);
+                configurationFactory.getPolicyConfiguration(contextId, false).commit();
+                LOG.log(DEBUG, "Committed policy for context: {0}", contextId);
             }
 
             Policy.getPolicy().refresh();
@@ -479,11 +480,12 @@ public class AuthorizationService {
 
         boolean isCallerInRole = checkPermissionScoped(ejbRoleRefPermission, principals);
 
-            logger.fine(() ->
-                "Authorization: checkBeanRoleRefPermission Result: " + isCallerInRole +
-                " EJBRoleRefPermission (Name) = " + ejbRoleRefPermission.getName() +
-                " (Action) = " + ejbRoleRefPermission.getActions() +
-                " (Codesource) = " + protectionDomainCreator.apply(principals).getCodeSource());
+        if (LOG.isLoggable(DEBUG)) {
+            LOG.log(DEBUG, "checkBeanRoleRefPermission result: {0} for"
+                    + " EJBRoleRefPermission[Name = {1}, Actions = {2}], Codesource = {3}",
+                isCallerInRole, ejbRoleRefPermission.getName(), ejbRoleRefPermission.getActions(),
+                protectionDomainCreator.apply(principals).getCodeSource());
+        }
 
         return isCallerInRole;
     }
@@ -493,10 +495,9 @@ public class AuthorizationService {
 
         boolean authorized = checkPermissionScoped(methodPermission, principals);
 
-        logger.fine(() ->
-            "Authorization: Access Control Decision Result: " + authorized +
-            " EJBMethodPermission (Name) = " + methodPermission.getName() +
-            " (Action) = " + methodPermission.getActions());
+        LOG.log(DEBUG,
+            "Authorization: Access Control Decision result: {0} for EJBMethodPermission[Name = {1}, Actions = {2}]",
+            authorized, methodPermission.getName(), methodPermission.getActions());
 
        return authorized;
     }
@@ -524,7 +525,7 @@ public class AuthorizationService {
             }
 
         } catch (PolicyContextException pce) {
-            throw new IllegalStateException(pce.toString());
+            throw new IllegalStateException(pce);
         }
     }
 
@@ -543,32 +544,36 @@ public class AuthorizationService {
             }
 
         } catch (PolicyContextException | ClassNotFoundException pce) {
-            throw new IllegalStateException(pce.toString());
+            throw new IllegalStateException(pce);
         }
     }
 
 
     boolean checkPermission(Permission permissionToBeChecked) {
+        LOG.log(DEBUG, "checkPermission(permissionToBeChecked={0})", permissionToBeChecked);
         return policy.implies(emptyProtectionDomain, permissionToBeChecked);
     }
 
     boolean checkPermission(Permission permissionToBeChecked, Set<Principal> principals) {
+        LOG.log(DEBUG, "checkPermission(permissionToBeChecked={0}, principals={1})",
+            new Object[] {permissionToBeChecked, principals});
         return policy.implies(newProtectionDomain(principals), permissionToBeChecked);
     }
 
     boolean checkPermissionScoped(Permission permissionToBeChecked, Set<Principal> principals) {
+        LOG.log(DEBUG, "checkPermission(permissionToBeChecked={0}, principals={1})",
+            new Object[] {permissionToBeChecked, principals});
         String oldContextId = null;
         try {
             oldContextId = setThreadContextId(contextId);
-
             return policy.implies(protectionDomainCreator.apply(principals), permissionToBeChecked);
         } catch (Throwable t) {
-            logger.log(SEVERE, "jacc_is_caller_in_role_exception", t);
+            LOG.log(ERROR, "Unexpected security exception", t);
         } finally {
             try {
                 setPolicyContextChecked(oldContextId, contextId);
             } catch (Throwable ex) {
-                logger.log(SEVERE, "jacc_policy_context_exception", ex);
+                LOG.log(ERROR, "Unexpected exception manipulating policy context", ex);
             }
         }
 
@@ -617,7 +622,7 @@ public class AuthorizationService {
                 emptyCodeSource,
                 null,
                 null,
-                principalSet == null ? null : (Principal[]) principalSet.toArray(new Principal[0]));
+                principalSet == null ? null : principalSet.toArray(Principal[]::new));
     }
 
     private String getConstrainedURI(HttpServletRequest request) {
@@ -658,9 +663,7 @@ public class AuthorizationService {
 
     private static void setPolicyContextChecked(String newContextId, String oldContextId) {
         if (newContextId != null && (oldContextId == null || !oldContextId.equals(newContextId))) {
-
-            logger.fine(() -> "Authorization: Changing Policy Context ID: oldContextId = " + oldContextId + " newContextId = " + newContextId);
-
+            LOG.log(DEBUG, "Changing Policy Context ID: oldContextId = {0}, newContextId = {1}", oldContextId, newContextId);
             try {
                 doPrivileged(() -> PolicyContext.setContextID(newContextId));
             } catch (Exception e) {
@@ -684,12 +687,12 @@ public class AuthorizationService {
     }
 
     @FunctionalInterface
-    private static interface PrivilegedExceptionRunnable {
+    private interface PrivilegedExceptionRunnable {
         void run() throws PrivilegedActionException;
     }
 
     @FunctionalInterface
-    public static interface ThrowableSupplier<T> {
+    public interface ThrowableSupplier<T> {
         T get() throws Throwable;
     }
 
