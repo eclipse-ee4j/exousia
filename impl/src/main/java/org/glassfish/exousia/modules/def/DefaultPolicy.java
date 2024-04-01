@@ -14,22 +14,26 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
-package org.glassfish.exousia.modules.def;
 
-import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
-import static java.util.Collections.list;
+package org.glassfish.exousia.modules.def;
 
 import jakarta.security.jacc.Policy;
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyConfigurationFactory;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PrincipalMapper;
+
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.security.Permissions;
 import java.util.Map;
 import java.util.Set;
+
 import javax.security.auth.Subject;
+
+import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
+import static java.util.Collections.list;
+
 
 /**
  *

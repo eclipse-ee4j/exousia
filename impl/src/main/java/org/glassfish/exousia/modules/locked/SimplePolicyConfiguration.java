@@ -17,18 +17,12 @@
 
 package org.glassfish.exousia.modules.locked;
 
-import static java.util.logging.Level.FINE;
-import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.SEVERE;
-
-import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.PolicyConfiguration;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 import jakarta.security.jacc.PolicyContextHandler;
-import jakarta.security.jacc.WebResourcePermission;
-import jakarta.security.jacc.WebRoleRefPermission;
-import jakarta.security.jacc.WebUserDataPermission;
+
+import java.lang.System.Logger;
 import java.lang.reflect.Constructor;
 import java.security.CodeSource;
 import java.security.Permission;
@@ -42,10 +36,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.management.MBeanPermission;
+
 import javax.security.auth.Subject;
+
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
 
 /**
  * The methods of this interface are used by containers to create policy statements in a Policy provider.
@@ -58,11 +53,13 @@ import javax.security.auth.Subject;
  */
 public class SimplePolicyConfiguration implements PolicyConfiguration {
 
+    private static final Logger LOG = System.getLogger(SimplePolicyConfiguration.class.getName());
+
     public static final int OPEN_STATE = 0;
     public static final int INSERVICE_STATE = 2;
     public static final int DELETED_STATE = 3;
 
-    private String contextId;
+    private final String contextId;
     private int state = OPEN_STATE;
 
     // Excluded permissions
@@ -75,9 +72,9 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     private List<Role> roleTable;
 
     // Lock on this PolicyConfiguration onject
-    private ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
-    private Lock readLock = policyContextLock.readLock();
-    private Lock writeLock = policyContextLock.writeLock();
+    private final ReentrantReadWriteLock policyContextLock = new ReentrantReadWriteLock(true);
+    private final Lock readLock = policyContextLock.readLock();
+    private final Lock writeLock = policyContextLock.writeLock();
 
     static {
         // Register a role mapper
@@ -88,41 +85,28 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
                     String packageName = SimplePolicyConfiguration.class.getPackage().getName();
                     className = packageName + "." + "GlassfishRoleMapper";
                 }
-
-                Constructor<?> constructor =
+                Constructor<?> constructorNoArg = null;
+                Constructor<?> constructorJUL = null;
+                try {
+                    constructorNoArg =
                     Thread.currentThread()
                           .getContextClassLoader()
                           .loadClass(className)
-                          .getConstructor(new Class[] { Logger.class });
+                          .getConstructor();
+                } catch (NoSuchMethodException e) {
+                    // For backward compatibility
+                    constructorJUL =
+                    Thread.currentThread()
+                          .getContextClassLoader()
+                          .loadClass(className)
+                          .getConstructor(new Class[] { java.util.logging.Logger.class });
+                }
 
-                PolicyContext.registerHandler(AuthorizationRoleMapper.HANDLER_KEY, new PolicyContextHandler() {
-
-                    @Override
-                    public Object getContext(String key, Object data) throws PolicyContextException {
-                        if (key.equals(AuthorizationRoleMapper.HANDLER_KEY)) {
-                            try {
-                                return constructor.newInstance(new Object[] { SharedState.getLogger() });
-                            } catch (Throwable t) {
-                                throw new PolicyContextException(t);
-                            }
-                        }
-                        return null;
-                    }
-
-                    @Override
-                    public String[] getKeys() throws PolicyContextException {
-                        return new String[] { AuthorizationRoleMapper.HANDLER_KEY };
-                    }
-
-                    @Override
-                    public boolean supports(String key) throws PolicyContextException {
-                        return key.equals(AuthorizationRoleMapper.HANDLER_KEY);
-                    }
-                }, false);
+                PolicyContextHandler handler = new ExousiaPolicyContextHandler(constructorNoArg, constructorJUL);
+                PolicyContext.registerHandler(AuthorizationRoleMapper.HANDLER_KEY, handler, false);
             }
         } catch (Throwable t) {
-            SharedState.getLogger().log(SEVERE, "RoleMapper.registration.failed", t);
-            throw new RuntimeException(t);
+            throw new IllegalStateException("RoleMapper registration failed!", t);
         }
     }
 
@@ -701,17 +685,15 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     private void commitRoleMapping() throws PolicyContextException {
         AuthorizationRoleMapper roleMapper = null;
         try {
-            /**
-             * NB: when running with a security manager, this method will call policy, to check if the policy module is authorized
-             * to invoke the policy context handler.
-             */
+            // NB: when running with a security manager, this method will call policy, to check if
+            // the policy module is authorized to invoke the policy context handler.
             roleMapper = (AuthorizationRoleMapper) PolicyContext.getContext(AuthorizationRoleMapper.HANDLER_KEY);
 
             if (roleMapper == null) {
-                throw new PolicyContextException("RoleMapper.lookup.null");
+                throw new PolicyContextException("RoleMapper lookup null");
             }
         } catch (Throwable t) {
-            SharedState.getLogger().log(SEVERE, "RoleMapper.lookup.failed", t);
+            LOG.log(ERROR, "RoleMapper lookup failed", t);
             if (t instanceof PolicyContextException) {
                 throw (PolicyContextException) t;
             }
@@ -834,43 +816,26 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
      */
     private int doImplies(Permission permissionToBeChecked, Subject subject) throws PolicyContextException {
         readLock.lock();
-        int doesImplies = 0;
         try {
+            LOG.log(DEBUG, "doImplies, roleTable: {0}, permission: {1}, subject: {2}", roleTable, permissionToBeChecked, subject);
             assertStateIsInService();
 
             if (permissionIsExcluded(permissionToBeChecked)) {
-                doesImplies = -1;
-
+                return -1;
             } else if (getUncheckedPermissions().implies(permissionToBeChecked)) {
-                doesImplies = 1;
-
+                return 1;
             } else if (roleTable != null) {
-
                 Principal principals[] = subject.getPrincipals().toArray(Principal[]::new);
-
                 if (principals.length == 0) {
-                    doesImplies = 0;
-
-                } else {
-
-                    for (Role role : roleTable) {
-                        if (role.arePrincipalsInRole(principals) && role.implies(permissionToBeChecked)) {
-                            doesImplies = 1;
-                            break;
-                        }
-                        // Added as a per role debugging convenience
-                        if (doesImplies != 1) {
-                            doesImplies = 0;
-                        }
-                    }
-
-                    // Added as an all role debugging convenience
-                    if (doesImplies != 1) {
-                        doesImplies = 0;
+                    return 0;
+                }
+                for (Role role : roleTable) {
+                    if (role.arePrincipalsInRole(principals) && role.implies(permissionToBeChecked)) {
+                        return 1;
                     }
                 }
             }
-            return doesImplies;
+            return 0;
         } catch (UnsupportedOperationException uso) {
             throw new PolicyContextException(uso);
         } finally {
@@ -966,50 +931,39 @@ public class SimplePolicyConfiguration implements PolicyConfiguration {
     static void refresh() throws PolicyContextException {
     }
 
-    static void doLog(Level level, String msg, Object[] params) {
-        Logger logger = SharedState.getLogger();
+    private static class ExousiaPolicyContextHandler implements PolicyContextHandler {
 
-        if (logger.isLoggable(level)) {
-            logger.log(level, msg, params);
+        private final Constructor<?> constructorNoArg;
+        private final Constructor<?> constructorJUL;
 
+        private ExousiaPolicyContextHandler(Constructor<?> constructorNoArg, Constructor<?> constructorJUL) {
+            this.constructorNoArg = constructorNoArg;
+            this.constructorJUL = constructorJUL;
+        }
+
+        @Override
+        public Object getContext(String key, Object data) throws PolicyContextException {
+            if (key.equals(AuthorizationRoleMapper.HANDLER_KEY)) {
+                try {
+                    if (constructorNoArg != null) {
+                        return constructorNoArg.newInstance();
+                    }
+                    return constructorJUL.newInstance(java.util.logging.Logger.getLogger("jakarta.authorization"));
+                } catch (Throwable t) {
+                    throw new PolicyContextException(t);
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public String[] getKeys() throws PolicyContextException {
+            return new String[] { AuthorizationRoleMapper.HANDLER_KEY };
+        }
+
+        @Override
+        public boolean supports(String key) throws PolicyContextException {
+            return key.equals(AuthorizationRoleMapper.HANDLER_KEY);
         }
     }
-
-    static void doPrivilegedLog(Level level, String msg, Throwable t) {
-        Logger logger = SharedState.getLogger();
-
-        if (logger.isLoggable(level)) {
-            logger.log(level, msg, t);
-
-        }
-    }
-
-
-    // ### Internal logging interfaces start here ###
-
-    static void logGetPermissionsFailure(Object o, Throwable t) {
-        doLog(INFO, "getPermissions.failure", new Object[] { PolicyContext.getContextID(), o });
-        doPrivilegedLog(INFO, "getPermissions.failure", t);
-    }
-
-    private static boolean permissionShouldBeLogged(Permission permission) {
-        return
-            !(permission instanceof WebResourcePermission) &&
-            !(permission instanceof WebUserDataPermission) &&
-            !(permission instanceof MBeanPermission) &&
-            !(permission instanceof WebRoleRefPermission) &&
-            !(permission instanceof EJBRoleRefPermission);
-    }
-
-    static void logAccessFailure(Permission permissionToBeChecked, Subject subject) {
-        if (permissionShouldBeLogged(permissionToBeChecked) || SharedState.getLogger().isLoggable(FINE)) {
-            doLog(FINE, "Domain.that.failed", new Object[] { PolicyContext.getContextID(), permissionToBeChecked, subject });
-        }
-    }
-
-    static void logException(Level level, String msg, Throwable t) {
-        doLog(level, msg, new Object[] { PolicyContext.getContextID() });
-        doPrivilegedLog(level, msg, t);
-    }
-
 }

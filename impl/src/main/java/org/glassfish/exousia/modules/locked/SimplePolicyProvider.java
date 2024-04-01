@@ -20,10 +20,16 @@ package org.glassfish.exousia.modules.locked;
 import jakarta.security.jacc.Policy;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
+
+import java.lang.System.Logger;
 import java.security.Permission;
 import java.security.PermissionCollection;
-import java.util.logging.Level;
+
 import javax.security.auth.Subject;
+
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.TRACE;
+
 
 /**
  *
@@ -31,6 +37,7 @@ import javax.security.auth.Subject;
  */
 public class SimplePolicyProvider implements Policy {
 
+    private static final Logger LOG = System.getLogger(SimplePolicyProvider.class.getName());
     private static final String REUSE = "java.security.Policy.supportsReuse";
 
     /**
@@ -73,26 +80,21 @@ public class SimplePolicyProvider implements Policy {
     }
 
     private boolean doImplies(Permission permissionToBeChecked, Subject subject) {
-        int implies = -1;
+        int implies = 1;
         try {
             implies = SimplePolicyConfiguration.implies(permissionToBeChecked, subject);
             if (implies > 0) {
+                LOG.log(TRACE, "SimplePolicyConfiguration returned implies = {0}, returning true.", implies);
                 return true;
             }
-        } catch (PolicyContextException pce) {
-            // the following block is included as a debugging convenience
-            if (implies != 0) {
-                implies = 1;
-            }
+        } catch (PolicyContextException e) {
+            LOG.log(TRACE, "SimplePolicyConfiguration.implies failed.", e);
         }
 
-        boolean doImplies = false;
+        LOG.log(DEBUG, "Access refused for the policy context id {0}, permission {1} and subject {2}.",
+            PolicyContext.getContextID(), permissionToBeChecked, subject);
 
-        if (!doImplies) {
-            SimplePolicyConfiguration.logAccessFailure(permissionToBeChecked, subject);
-        }
-
-        return doImplies;
+        return false;
     }
 
     /**
@@ -106,7 +108,7 @@ public class SimplePolicyProvider implements Policy {
             // will enable permission caching of container, unless REUSE
             // property is set, and its value is not "true".
             String propValue = System.getProperty(REUSE);
-            boolean supportsReuse = (propValue == null ? true : Boolean.valueOf(propValue));
+            boolean supportsReuse = (propValue == null ? true : Boolean.parseBoolean(propValue));
             if (supportsReuse) {
                 if (PolicyContext.getHandlerKeys().contains(REUSE)) {
                     PolicyContext.getContext(REUSE);
@@ -114,8 +116,7 @@ public class SimplePolicyProvider implements Policy {
             }
             SimplePolicyConfiguration.refresh();
         } catch (PolicyContextException pce) {
-            SimplePolicyConfiguration.logException(Level.SEVERE, "refresh.failure", pce);
-            throw new IllegalStateException(pce);
+            throw new IllegalStateException("Refresh failed", pce);
         }
     }
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -13,6 +14,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  */
+
 package org.glassfish.exousia.constraints;
 
 import static java.util.Arrays.asList;
@@ -67,5 +69,9 @@ public class WebResourceCollection {
         return httpMethodOmissions;
     }
 
-
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[urlPatterns: " + getUrlPatterns() + ", httpMethods: " + getHttpMethods()
+            + ", httpMethodOmmissions: " + getHttpMethodOmissions() + "]";
+    }
 }
