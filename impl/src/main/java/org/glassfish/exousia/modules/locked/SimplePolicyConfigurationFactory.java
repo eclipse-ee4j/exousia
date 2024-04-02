@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to Eclipse Foundation.
+ * Copyright (c) 2021, 2024 Contributors to Eclipse Foundation.
  * Copyright (c) 1997, 2018 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -24,12 +24,12 @@ import jakarta.security.jacc.PolicyContextException;
 
 /**
  * Abstract factory and finder class for obtaining the instance of the class that implements the
- * PolicyConfigurationFactory of a provider. 
- * 
+ * PolicyConfigurationFactory of a provider.
+ *
  * <p>
  * The factory will be used to instantiate PolicyConfiguration objects that will be used by the deployment tools of the
  * container to create and manage policy contexts within the Policy Provider.
- * 
+ *
  * <P>
  * Implementation classes must have a public no argument constructor that may be used to create an operational instance
  * of the factory implementation class.
@@ -41,23 +41,27 @@ import jakarta.security.jacc.PolicyContextException;
  */
 public class SimplePolicyConfigurationFactory extends PolicyConfigurationFactory {
 
+    public SimplePolicyConfigurationFactory() {
+        super(null);
+    }
+
     /**
      * This method is used to obtain an instance of the provider specific class that implements the PolicyConfiguration
      * interface that corresponds to the identified policy context within the provider. The methods of the
      * PolicyConfiguration interface are used to define the policy statements of the identified policy context.
-     * 
+     *
      * <P>
      * If at the time of the call, the identified policy context does not exist in the provider, then the policy context
      * will be created in the provider and the Object that implements the context's PolicyConfiguration Interface will be
      * returned. If the state of the identified context is "deleted" or "inService" it will be transitioned to the "open"
      * state as a result of the call. The states in the lifecycle of a policy context are defined by the PolicyConfiguration
      * interface.
-     * 
+     *
      * <P>
      * For a given value of policy context identifier, this method must always return the same instance of
      * PolicyConfiguration and there must be at most one actual instance of a PolicyConfiguration with a given policy
      * context identifier (during a process context).
-     * 
+     *
      * <P>
      * To preserve the invariant that there be at most one PolicyConfiguration object for a given policy context, it may be
      * necessary for this method to be thread safe.
