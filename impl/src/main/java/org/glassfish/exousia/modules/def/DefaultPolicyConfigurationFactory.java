@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -32,6 +32,10 @@ import jakarta.security.jacc.PolicyContextException;
 public class DefaultPolicyConfigurationFactory extends PolicyConfigurationFactory {
 
     private static final ConcurrentMap<String, DefaultPolicyConfigurationStateMachine> configurators = new ConcurrentHashMap<>();
+
+    public DefaultPolicyConfigurationFactory() {
+        super(null);
+    }
 
     @Override
     public PolicyConfiguration getPolicyConfiguration(String contextID, boolean remove) throws PolicyContextException {

@@ -17,6 +17,15 @@
 
 package org.glassfish.exousia;
 
+import static jakarta.security.jacc.PolicyContext.HTTP_SERVLET_REQUEST;
+import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
+import static jakarta.security.jacc.PolicyContext.SUBJECT;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.util.Collections.emptySet;
+import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
+import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
+
 import jakarta.security.jacc.EJBMethodPermission;
 import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.Policy;
@@ -31,7 +40,6 @@ import jakarta.security.jacc.WebRoleRefPermission;
 import jakarta.security.jacc.WebUserDataPermission;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
-
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.security.Permission;
@@ -44,24 +52,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-
 import javax.security.auth.Subject;
-
 import org.glassfish.exousia.constraints.SecurityConstraint;
 import org.glassfish.exousia.mapping.DefaultPrincipalMapper;
 import org.glassfish.exousia.mapping.SecurityRoleRef;
 import org.glassfish.exousia.modules.def.DefaultPolicy;
 import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
 import org.glassfish.exousia.permissions.JakartaPermissions;
-
-import static jakarta.security.jacc.PolicyContext.HTTP_SERVLET_REQUEST;
-import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
-import static jakarta.security.jacc.PolicyContext.SUBJECT;
-import static java.lang.System.Logger.Level.DEBUG;
-import static java.lang.System.Logger.Level.ERROR;
-import static java.util.Collections.emptySet;
-import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
-import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
 
 /**
  *
@@ -82,8 +79,8 @@ public class AuthorizationService {
      */
     private final Policy policy;
     private final PolicyFactory policyFactory;
-    private final PolicyConfigurationFactory factory;
     private final PolicyConfiguration policyConfiguration;
+    private final PolicyConfigurationFactory policyConfigurationFactory;
     private final Map<String, jakarta.security.jacc.PrincipalMapper> principalMapper = new ConcurrentHashMap<>();
 
     private String constrainedUriRequestAttribute;
@@ -117,7 +114,7 @@ public class AuthorizationService {
             Supplier<Subject> subjectSupplier, Supplier<PrincipalMapper> principalMapperSupplier) {
 
         this(
-            installFactory(factoryClass), installPolicy(policyClass), contextId,
+            installPolicyConfigurationFactory(factoryClass), installPolicy(policyClass), contextId,
             subjectSupplier, principalMapperSupplier);
     }
 
@@ -126,7 +123,7 @@ public class AuthorizationService {
         Supplier<Subject> subjectSupplier, Supplier<PrincipalMapper> principalMapperSupplier) {
 
         this(
-            getConfigurationFactory(), null, contextId,
+            PolicyConfigurationFactory.get(), null, contextId,
             subjectSupplier, principalMapperSupplier);
     }
 
@@ -134,7 +131,7 @@ public class AuthorizationService {
         PolicyConfigurationFactory factory, Policy policy, String contextId,
         Supplier<Subject> subjectSupplier, Supplier<PrincipalMapper> principalMapperSupplier) {
         try {
-            this.factory = factory;
+            this.policyConfigurationFactory = factory;
             this.policyConfiguration = factory.getPolicyConfiguration(contextId, false);
             this.policy = policy;
             this.contextId = contextId;
@@ -242,10 +239,10 @@ public class AuthorizationService {
 
     public void removeStatementsFromPolicy(Set<String> declaredRoles) {
         try {
-            boolean inService = factory.inService(contextId);
+            boolean inService = policyConfigurationFactory.inService(contextId);
 
             // Open policy configuration
-            PolicyConfiguration policyConfiguration = factory.getPolicyConfiguration(contextId, false);
+            PolicyConfiguration policyConfiguration = policyConfigurationFactory.getPolicyConfiguration(contextId, false);
 
             policyConfiguration.removeUncheckedPolicy();
             policyConfiguration.removeExcludedPolicy();
@@ -286,7 +283,7 @@ public class AuthorizationService {
      */
     public boolean linkPolicy(String linkedContextId, boolean lastInService) {
         try {
-            boolean inService = factory.inService(contextId);
+            boolean inService = policyConfigurationFactory.inService(contextId);
 
             if (linkedContextId == null) {
                 return inService;
@@ -298,8 +295,8 @@ public class AuthorizationService {
 
             // Only do the link if the named policyConfiguration is not inService.
             if (!inService) {
-                PolicyConfiguration policyConfiguration = factory.getPolicyConfiguration(contextId, false);
-                PolicyConfiguration linkedPolicyConfiguration = factory.getPolicyConfiguration(linkedContextId, false);
+                PolicyConfiguration policyConfiguration = policyConfigurationFactory.getPolicyConfiguration(contextId, false);
+                PolicyConfiguration linkedPolicyConfiguration = policyConfigurationFactory.getPolicyConfiguration(linkedContextId, false);
                 policyConfiguration.linkConfiguration(linkedPolicyConfiguration);
             }
 
@@ -340,7 +337,7 @@ public class AuthorizationService {
 
     public void commitPolicy() {
         try {
-            if (!factory.inService(contextId)) {
+            if (!policyConfigurationFactory.inService(contextId)) {
 
                 // Note that it is presumed that the policyConfiguration exists, and that
                 // it is populated with the desired policy statements.
@@ -380,7 +377,7 @@ public class AuthorizationService {
     public void refresh() {
         // Refresh policy if the context was in service
         try {
-            if (factory.inService(contextId)) {
+            if (policyConfigurationFactory.inService(contextId)) {
                 getPolicy().refresh();
             }
         } catch (PolicyContextException e) {
@@ -501,7 +498,6 @@ public class AuthorizationService {
         return runInScope(() -> beanClassMethod.invoke(bean, methodParameters));
     }
 
-
     /**
      * Inform the policy module to take the named policy context out of service. The policy context is transitioned to the
      * deleted state.
@@ -509,10 +505,10 @@ public class AuthorizationService {
      */
     public void deletePolicy() {
         try {
-            boolean wasInService = factory.inService(contextId);
+            boolean wasInService = policyConfigurationFactory.inService(contextId);
 
             // Find the PolicyConfig and delete it.
-            factory.getPolicyConfiguration(contextId, false).delete();
+            policyConfigurationFactory.getPolicyConfiguration(contextId, false).delete();
 
             // Only do refresh policy if the deleted context was in service
             if (wasInService) {
@@ -542,7 +538,6 @@ public class AuthorizationService {
             throw new IllegalStateException(pce);
         }
     }
-
 
     boolean checkPermission(Permission permissionToBeChecked) {
         LOG.log(DEBUG, "checkPermission(permissionToBeChecked={0})", permissionToBeChecked);
@@ -590,26 +585,86 @@ public class AuthorizationService {
         }
     }
 
-    private static PolicyConfigurationFactory installFactory(Class<?> factoryClass) {
+    public static PolicyConfigurationFactory installPolicyConfigurationFactory(Class<?> factoryClass) {
+        if (factoryClass == null) {
+            return null;
+        }
+
+        PolicyConfigurationFactory existingFactory = PolicyConfigurationFactory.get();
+        if (existingFactory.getClass().equals(factoryClass)) {
+            return existingFactory; // first one
+        }
+
+        PolicyConfigurationFactory newFactory = null;
+        try {
+            newFactory = (PolicyConfigurationFactory)
+                    factoryClass.getDeclaredConstructor(PolicyConfigurationFactory.class)
+                        .newInstance(existingFactory);
+        } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
+            // not available
+        }
+
+        if (newFactory == null) {
+            try {
+                newFactory = (PolicyConfigurationFactory)
+                        factoryClass.getDeclaredConstructor()
+                                    .newInstance();
+            } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        PolicyConfigurationFactory.setPolicyConfigurationFactory(newFactory);
         System.setProperty(PolicyConfigurationFactory.FACTORY_NAME, factoryClass.getName());
 
-        return getConfigurationFactory();
+        return PolicyConfigurationFactory.get();
     }
 
-    private static Policy installPolicy(Class<? extends Policy> policyClass) {
+    public static PolicyFactory installPolicyFactory(Class<?> factoryClass) {
+        if (factoryClass == null) {
+            return null;
+        }
+
+        PolicyFactory existingFactory = PolicyFactory.getPolicyFactory();
+        if (existingFactory.getClass().equals(factoryClass)) {
+            return existingFactory; // first one
+        }
+
+        PolicyFactory newFactory = null;
+        try {
+            newFactory = (PolicyFactory)
+                    factoryClass.getDeclaredConstructor(PolicyFactory.class)
+                        .newInstance(existingFactory);
+        } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
+            // not available
+        }
+
+        if (newFactory == null) {
+            try {
+                newFactory = (PolicyFactory)
+                        factoryClass.getDeclaredConstructor()
+                                    .newInstance();
+            } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        PolicyFactory.setPolicyFactory(newFactory);
+        System.setProperty(PolicyFactory.FACTORY_NAME, factoryClass.getName());
+
+        return PolicyFactory.getPolicyFactory();
+    }
+
+    public static Policy installPolicy(Class<? extends Policy> policyClass) {
+        if (policyClass == null) {
+            return null;
+        }
+
         try {
             PolicyFactory.getPolicyFactory().setPolicy(policyClass.getConstructor().newInstance());
 
             return PolicyFactory.getPolicyFactory().getPolicy();
         } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static PolicyConfigurationFactory getConfigurationFactory() {
-        try {
-            return PolicyConfigurationFactory.getPolicyConfigurationFactory();
-        } catch (ClassNotFoundException | PolicyContextException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -650,7 +705,8 @@ public class AuthorizationService {
     }
 
     private static Collection<String> getAllDeclaredRoles() {
-        return getConfigurationFactory()
+        return PolicyConfigurationFactory
+                .get()
                 .getPolicyConfiguration()
                 .getPerRolePermissions()
                 .keySet();

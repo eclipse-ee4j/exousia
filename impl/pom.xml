@@ -96,14 +96,14 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <version>6.1.0-M2</version>
+            <version>6.1.0</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>jakarta.authorization</groupId>
             <artifactId>jakarta.authorization-api</artifactId>
-            <version>3.0.0-M2</version>
+            <version>3.0.0-M4</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -178,7 +178,7 @@
             
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.12.1</version>
+                <version>3.13.0</version>
                 <configuration>
                     <release>17</release>
                 </configuration>

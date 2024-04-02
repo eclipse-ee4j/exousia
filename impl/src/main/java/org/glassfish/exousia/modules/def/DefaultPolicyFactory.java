@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0, which is available at
@@ -23,6 +23,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DefaultPolicyFactory extends PolicyFactory {
 
     private static Map<String, Policy> idToPolicyMap = new ConcurrentHashMap<>();
+
+    public DefaultPolicyFactory() {
+        super(null);
+    }
 
     // get/set global (system wide) policy?
 
