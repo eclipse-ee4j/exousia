@@ -30,7 +30,7 @@
 
     <groupId>org.glassfish.exousia</groupId>
     <artifactId>exousia.spi.tomcat</artifactId>
-    <version>2.1.2-SNAPSHOT</version>
+    <version>2.1.2</version>
 
     <name>Exousia Tomcat Integration</name>
     <description>
