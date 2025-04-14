@@ -145,7 +145,7 @@ public class AuthorizationService {
         try {
             this.factory = factory;
             this.policyConfiguration = factory.getPolicyConfiguration(contextId, false);
-            this.policy = Policy.getPolicy();
+            this.policy = AuthorizationService.getPolicy();
             this.contextId = contextId;
 
 
@@ -390,7 +390,7 @@ public class AuthorizationService {
                 LOG.log(DEBUG, "Committed policy for context: {0}", contextId);
             }
 
-            Policy.getPolicy().refresh();
+            getPolicy().refresh();
         } catch (PolicyContextException | ClassNotFoundException pce) {
             throw new IllegalStateException(pce);
         }
@@ -540,7 +540,7 @@ public class AuthorizationService {
 
             // Only do refresh policy if the deleted context was in service
             if (wasInService) {
-                Policy.getPolicy().refresh();
+                getPolicy().refresh();
             }
 
         } catch (PolicyContextException | ClassNotFoundException pce) {
@@ -597,11 +597,28 @@ public class AuthorizationService {
 
     private static Policy installPolicy(Class<? extends Policy> policyClass) {
         try {
-            Policy.setPolicy(policyClass.getConstructor().newInstance());
+            setPolicy(policyClass.getConstructor().newInstance());
 
             return getPolicy();
         } catch (ReflectiveOperationException | IllegalArgumentException | SecurityException e) {
             throw new IllegalStateException(e);
+        }
+    }
+
+    public static Policy getPolicy() {
+        Policy policy = PolicyJDK24.getPolicy();
+        if (policy == null) {
+            policy = Policy.getPolicy();
+        }
+
+        return policy;
+    }
+
+    public static void setPolicy(Policy policy) {
+        try {
+            Policy.setPolicy(policy);
+        } catch (UnsupportedOperationException e) {
+            PolicyJDK24.setPolicy(policy);
         }
     }
 
@@ -611,10 +628,6 @@ public class AuthorizationService {
         } catch (ClassNotFoundException | PolicyContextException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    private static Policy getPolicy() {
-        return Policy.getPolicy();
     }
 
     private ProtectionDomain newProtectionDomain(Set<Principal> principalSet) {
