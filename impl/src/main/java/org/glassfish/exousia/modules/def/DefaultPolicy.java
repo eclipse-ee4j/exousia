@@ -36,6 +36,7 @@ import java.util.Map;
 
 import javax.security.auth.Subject;
 
+import org.glassfish.exousia.AuthorizationService;
 import org.glassfish.exousia.spi.PrincipalMapper;
 
 import static java.util.Arrays.asList;
@@ -259,7 +260,7 @@ public class DefaultPolicy extends Policy {
     }
 
     private Policy getDefaultPolicy() {
-        Policy policy = Policy.getPolicy();
+        Policy policy = AuthorizationService.getPolicy();
         if (policy instanceof DefaultPolicy) {
             LOG.log(Level.WARNING, "Cannot obtain default / previous policy.");
             return null;
