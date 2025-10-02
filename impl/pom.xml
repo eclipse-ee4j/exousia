@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2021, 2024 Contributors to Eclipse Foundation.
+    Copyright (c) 2021, 2025 Contributors to Eclipse Foundation.
     Copyright (c) 2010, 2019 Oracle and/or its affiliates. All rights reserved.
 
     This program and the accompanying materials are made available under the
@@ -103,7 +103,7 @@
         <dependency>
             <groupId>jakarta.authorization</groupId>
             <artifactId>jakarta.authorization-api</artifactId>
-            <version>3.0.0-M4</version>
+            <version>3.0.0</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
@@ -156,7 +156,7 @@
         </resources>
     
         <plugins>
-            <!-- Sets minimal Maven version to 3.6.0 -->
+            <!-- Sets minimal Maven version to 3.9.6 -->
             <plugin>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <executions>
@@ -168,7 +168,7 @@
                         <configuration>
                             <rules>
                                 <requireMavenVersion>
-                                    <version>3.6.0</version>
+                                    <version>3.9.6</version>
                                 </requireMavenVersion>
                             </rules>
                         </configuration>
@@ -178,7 +178,7 @@
             
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>3.14.1</version>
                 <configuration>
                     <release>17</release>
                 </configuration>
@@ -189,7 +189,7 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>5.1.9</version>
+                <version>6.0.0</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
@@ -286,7 +286,7 @@
                             </groups>
                             <bottom><![CDATA[
 Comments to: <a href="mailto:exousia-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
-Copyright &#169; 2021, 2024 Eclipse Foundation. All rights reserved.<br>
+Copyright &#169; 2021, 2025 Eclipse Foundation. All rights reserved.<br>
 Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
                             </bottom>
                         </configuration>
@@ -313,7 +313,7 @@ Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">l
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.6.0</version>
+                <version>1.7.3</version>
                 <configuration>
                     <flattenMode>ossrh</flattenMode>
                 </configuration>
