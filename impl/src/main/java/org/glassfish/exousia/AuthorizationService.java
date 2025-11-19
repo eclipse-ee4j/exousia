@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2025 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -415,7 +415,7 @@ public class AuthorizationService {
     }
 
     public boolean checkPublicWebResourcePermission(HttpServletRequest request) {
-        return checkPermission(new WebResourcePermission(getConstrainedURI(request), request.getMethod()));
+        return checkPermission(new WebResourcePermission(getURLPattern(request), request.getMethod()));
     }
 
     public boolean checkWebResourcePermission(HttpServletRequest request) {
@@ -433,7 +433,7 @@ public class AuthorizationService {
     public boolean checkWebResourcePermission(HttpServletRequest request, Subject subject) {
         return checkPermission(
             new WebResourcePermission(
-                getConstrainedURI(request),
+                getURLPattern(request),
                 request.getMethod()),
                 subject);
     }
@@ -441,7 +441,7 @@ public class AuthorizationService {
     public boolean checkWebResourcePermission(HttpServletRequest request, Set<Principal> principals) {
         return checkPermission(
             new WebResourcePermission(
-                getConstrainedURI(request),
+                getURLPattern(request),
                 request.getMethod()),
                 principals);
     }
@@ -678,11 +678,18 @@ public class AuthorizationService {
         return policyFactory.getPolicy(contextId);
     }
 
-    private String getConstrainedURI(HttpServletRequest request) {
+    /**
+     * Creates a single URLPattern in the format as requested by {@link WebResourcePermission} (see its javadoc).
+     *
+     * @param request the request from which a request relative URI is obtained to use as URLPattern in a permission check.
+     *
+     * @return a valid URLPattern to use in WebResourcePermission
+     */
+    private String getURLPattern(HttpServletRequest request) {
         if (constrainedUriRequestAttribute != null) {
             String uri = (String) request.getAttribute(constrainedUriRequestAttribute);
             if (uri != null) {
-                return uri;
+                return uri.replace(":", "%3A");
             }
         }
 
@@ -691,7 +698,7 @@ public class AuthorizationService {
             return "";
         }
 
-        return relativeURI.replaceAll(":", "%3A");
+        return relativeURI.replace(":", "%3A");
     }
 
     private PrincipalMapper getOrCreatePrincipalMapper(String contextId, Supplier<PrincipalMapper> principalMapperSupplier) {
