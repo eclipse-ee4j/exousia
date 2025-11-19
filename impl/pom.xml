@@ -21,15 +21,12 @@
     <modelVersion>4.0.0</modelVersion>
     
     <parent>
-        <groupId>org.eclipse.ee4j</groupId>
-        <artifactId>project</artifactId>
-        <version>1.0.9</version>
-        <relativePath/>
+       <groupId>org.glassfish.exousia</groupId>
+       <artifactId>parent</artifactId>
+       <version>3.0.1-SNAPSHOT</version>
     </parent>
 
-    <groupId>org.glassfish.exousia</groupId>
     <artifactId>exousia</artifactId>
-    <version>3.0.1-SNAPSHOT</version>
 
     <name>Exousia</name>
     <description>
@@ -293,7 +290,7 @@ Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">l
                     </execution>
                 </executions>
             </plugin>
-            
+
             <!-- Check licenses of dependencies -->
             <plugin>
                 <groupId>org.eclipse.dash</groupId>
@@ -308,34 +305,7 @@ Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">l
                     </execution>
                 </executions>
             </plugin>
-            
-            <!-- Generate a "consumer pom" for the generated jar -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.7.3</version>
-                <configuration>
-                    <flattenMode>ossrh</flattenMode>
-                </configuration>
-                <executions>
-                    <!-- enable flattening -->
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <!-- ensure proper cleanup -->
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+
         </plugins>
     </build>
 </project>
