@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2024, 2026 Contributors to the Eclipse Foundation.
  * Copyright (c) 1997, 2021 Oracle and/or its affiliates. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 
-import org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer;
 import org.glassfish.exousia.mapping.SecurityRoleRef;
 
 import static java.lang.System.Logger.Level.DEBUG;
@@ -47,8 +46,6 @@ public class RolesToPermissionsTransformer {
     private static final Logger LOG = System.getLogger(RolesToPermissionsTransformer.class.getName());
 
     public static final String ANY_AUTHENTICATED_CALLER_ROLE = "**";
-
-    private static final String CLASS_NAME = ConstraintsToPermissionsTransformer.class.getSimpleName();
 
     private static final BiFunction<String, String, Permission> CREATE_BEAN_REF = EJBRoleRefPermission::new;
     private static final BiFunction<String, String, Permission> CREATE_WEB_REF = WebRoleRefPermission::new;

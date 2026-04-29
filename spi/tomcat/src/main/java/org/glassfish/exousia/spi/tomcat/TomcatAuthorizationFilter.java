@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2026 Contributors to the Eclipse Foundation.
  * Copyright (c) 2020, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -85,7 +85,7 @@ public class TomcatAuthorizationFilter extends HttpFilter implements ServletRequ
         // Copy all the security constraints that Tomcat has collected to the Jakarta Authorization
         // repository as well. That way Jakarta Authorization can work with the same data as Tomcat
         // internally does.
-        authorizationService.addConstraintsToPolicy(
+        authorizationService.addConstraintsToPolicy(null,
             convertTomcatConstraintsToExousia(constraints),
             new HashSet<>(declaredRoles), isDenyUncoveredHttpMethods, emptyMap());
 

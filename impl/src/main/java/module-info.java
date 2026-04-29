@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2026 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -16,7 +16,7 @@
  */
 
 module org.glassfish.exousia {
-    
+
     exports org.glassfish.exousia;
     exports org.glassfish.exousia.constraints;
     exports org.glassfish.exousia.constraints.transformer;
@@ -31,8 +31,8 @@ module org.glassfish.exousia {
     opens org.glassfish.exousia.modules.def;
     opens org.glassfish.exousia.modules.locked;
     opens org.glassfish.exousia.permissions;
-    requires jakarta.servlet;
-    requires jakarta.security.jacc;
+    requires transitive jakarta.servlet;
+    requires transitive jakarta.security.jacc;
     requires java.logging;
     requires org.javassist;
     requires static java.management;

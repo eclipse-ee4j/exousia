@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2025 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2026 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -17,15 +17,6 @@
 
 package org.glassfish.exousia;
 
-import static jakarta.security.jacc.PolicyContext.HTTP_SERVLET_REQUEST;
-import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
-import static jakarta.security.jacc.PolicyContext.SUBJECT;
-import static java.lang.System.Logger.Level.DEBUG;
-import static java.lang.System.Logger.Level.ERROR;
-import static java.util.Collections.emptySet;
-import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
-import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
-
 import jakarta.security.jacc.EJBMethodPermission;
 import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.Policy;
@@ -40,11 +31,13 @@ import jakarta.security.jacc.WebRoleRefPermission;
 import jakarta.security.jacc.WebUserDataPermission;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.security.Permission;
 import java.security.Permissions;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -52,13 +45,26 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+
 import javax.security.auth.Subject;
+
 import org.glassfish.exousia.constraints.SecurityConstraint;
+import org.glassfish.exousia.constraints.transformer.StagedPermissionToConstraintResult;
+import org.glassfish.exousia.constraints.transformer.StagedPermissionsToConstraintsTransformer;
 import org.glassfish.exousia.mapping.DefaultPrincipalMapper;
 import org.glassfish.exousia.mapping.SecurityRoleRef;
 import org.glassfish.exousia.modules.def.DefaultPolicy;
 import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
 import org.glassfish.exousia.permissions.JakartaPermissions;
+
+import static jakarta.security.jacc.PolicyContext.HTTP_SERVLET_REQUEST;
+import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
+import static jakarta.security.jacc.PolicyContext.SUBJECT;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.util.Collections.emptySet;
+import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
+import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
 
 /**
  *
@@ -206,12 +212,33 @@ public class AuthorizationService {
         this.constrainedUriRequestAttribute = constrainedUriRequestAttribute;
     }
 
-    public void addConstraintsToPolicy(List<SecurityConstraint> securityConstraints, Set<String> declaredRoles, boolean isDenyUncoveredHttpMethods, Map<String, List<SecurityRoleRef>> servletRoleMappings) {
+    public void addConstraintsToPolicy(JakartaPermissions stagedPermissions, List<SecurityConstraint> securityConstraints, Set<String> declaredRoles, boolean isDenyUncoveredHttpMethods, Map<String, List<SecurityRoleRef>> servletRoleMappings) {
         try {
-            JakartaPermissions jakartaResourceDataPermissions = createResourceAndDataPermissions(declaredRoles, isDenyUncoveredHttpMethods, securityConstraints);
+            // 1. Convert simple staged WebResourcePermission entries into SecurityConstraint.
+            StagedPermissionToConstraintResult stagedConstraintResult =
+                StagedPermissionsToConstraintsTransformer.transform(stagedPermissions);
+
+            // 2. Merge web.xml / servlet constraints with REST-derived constraints.
+            List<SecurityConstraint> mergedConstraints = new ArrayList<>();
+            mergedConstraints.addAll(securityConstraints);
+            mergedConstraints.addAll(stagedConstraintResult.securityConstraints());
+
+            // 3. Run the existing closed-world transformer over the whole universe.
+            JakartaPermissions jakartaResourceDataPermissions =
+                createResourceAndDataPermissions(
+                    declaredRoles,
+                    isDenyUncoveredHttpMethods,
+                    mergedConstraints);
+
             addPermissionsToPolicy(jakartaResourceDataPermissions);
 
-            JakartaPermissions jakartaRoleRefPermissions = createWebRoleRefPermission(declaredRoles, servletRoleMappings);
+            // 4. Preserve any non-resource permissions that were already staged.
+            addPermissionsToPolicy(stagedConstraintResult.passThroughPermissions());
+
+            // 5. Add servlet role-ref permissions
+            JakartaPermissions jakartaRoleRefPermissions =
+                createWebRoleRefPermission(declaredRoles, servletRoleMappings);
+
             addPermissionsToPolicy(jakartaRoleRefPermissions);
 
         } catch (PolicyContextException e) {
