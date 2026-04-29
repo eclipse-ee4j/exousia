@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Contributors to the Eclipse Foundation.
+ * Copyright (c) 2023, 2026 Contributors to the Eclipse Foundation.
  * Copyright (c) 2019, 2021 OmniFaces. All rights reserved.
  *
  * This program and the accompanying materials are made available under the
@@ -42,7 +42,6 @@ import static java.util.Collections.list;
 public class DefaultPolicy implements Policy {
 
     private PolicyConfigurationFactory policyConfigurationFactory;
-    private PrincipalMapper principalMapper;
 
     @Override
     public boolean isExcluded(Permission permissionToBeChecked) {
