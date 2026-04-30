@@ -17,14 +17,16 @@
     SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>org.eclipse.ee4j</groupId>
         <artifactId>project</artifactId>
-        <version>1.0.9</version>
-        <relativePath/>
+        <version>2.0.2</version>
+        <relativePath />
     </parent>
 
     <groupId>org.glassfish.exousia</groupId>
@@ -34,11 +36,11 @@
 
     <name>Exousia Parent</name>
     <description>
-    	Eclipse compatible implementation of Jakarta Authorization - Parent.
+        Eclipse compatible implementation of Jakarta Authorization - Parent.
     </description>
     <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
     <inceptionYear>2019</inceptionYear>
- 
+
     <licenses>
         <license>
             <name>EPL 2.0</name>
@@ -61,13 +63,13 @@
         </developer>
     </developers>
     <contributors>
-       <contributor>
-           <name>Exousia Contributors</name>
-           <email>exousia-dev@eclipse.org</email>
-           <url>https://github.com/eclipse-ee4j/exousia/graphs/contributors</url>
-       </contributor>
+        <contributor>
+            <name>Exousia Contributors</name>
+            <email>exousia-dev@eclipse.org</email>
+            <url>https://github.com/eclipse-ee4j/exousia/graphs/contributors</url>
+        </contributor>
     </contributors>
-    
+
     <mailingLists>
         <mailingList>
             <name>Jakarta Authorization dev mailing list</name>
@@ -81,7 +83,8 @@
     <scm>
         <url>scm:git:https://github.com/eclipse-ee4j/exousia.git</url>
         <connection>scm:git:git://github.com/eclipse-ee4j/exousia.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/eclipse-ee4j/exousia.git</developerConnection>
+        <developerConnection>
+            scm:git:ssh://git@github.com/eclipse-ee4j/exousia.git</developerConnection>
     </scm>
     <issueManagement>
         <system>github</system>
@@ -92,7 +95,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
-    
+
     <modules>
         <module>impl</module>
         <module>spi</module>
@@ -120,7 +123,7 @@
                     </execution>
                 </executions>
             </plugin>
-            
+
             <!-- Generate a "consumer pom" for the generated jar -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -148,27 +151,7 @@
                     </execution>
                 </executions>
             </plugin>
-         </plugins>
+        </plugins>
     </build>
 
-    <profiles>
-        <profile>
-            <id>central-release</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.sonatype.central</groupId>
-                        <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.9.0</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <publishingServerId>central</publishingServerId>
-                            <autoPublish>true</autoPublish>
-                            <!-- waitUntil>published</waitUntil -->
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
