@@ -25,6 +25,7 @@ import jakarta.security.jacc.PrincipalMapper;
 
 import java.security.Permission;
 import java.security.PermissionCollection;
+import java.security.Principal;
 import java.security.Permissions;
 import java.util.Map;
 import java.util.Set;
@@ -55,6 +56,38 @@ public class DefaultPolicy implements Policy {
         return isUnchecked(
                 getPolicyConfigurationFactory().getPolicyConfiguration().getUncheckedPermissions(),
                 permissionToBeChecked);
+    }
+
+    /**
+     * The same answer as {@link Policy#implies(Permission, Set)}, without building a {@link Subject} for permissions
+     * that do not depend on the caller.
+     *
+     * <p>
+     * The default wraps the principals in a new {@code Subject} for every check, copying them into its synchronized
+     * sets, before asking whether the permission is excluded or unchecked - neither of which looks at the caller. An
+     * EJB container asks this for every business method call; for a method that is unchecked, the common case, the
+     * {@code Subject} was most of the work. It is now built only when the answer depends on the caller's roles.
+     * A subclass that overrides {@link #implies(Permission, Subject)} keeps the default behaviour, so that its
+     * override is still consulted.
+     */
+    @Override
+    public boolean implies(Permission permissionToBeChecked, Set<Principal> principals) {
+        if (getClass() != DefaultPolicy.class) {
+            return Policy.super.implies(permissionToBeChecked, principals);
+        }
+
+        if (isExcluded(permissionToBeChecked)) {
+            return false;
+        }
+
+        if (isUnchecked(permissionToBeChecked)) {
+            return true;
+        }
+
+        Subject subject = new Subject();
+        subject.getPrincipals().addAll(principals);
+
+        return impliesByRole(permissionToBeChecked, subject);
     }
 
     @Override

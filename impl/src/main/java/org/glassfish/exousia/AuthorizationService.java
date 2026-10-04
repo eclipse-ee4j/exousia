@@ -42,6 +42,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -96,6 +97,13 @@ public class AuthorizationService {
     private String constrainedUriRequestAttribute;
 
     private final Permissions restResourcePermissions = new Permissions();
+
+    /**
+     * The permission for each bean method checked so far. Building an {@link EJBMethodPermission} assembles the
+     * method's signature into a string, and a container checks it for every business method call; the permission is
+     * immutable and depends only on the bean, the interface and the method, so it is built once per method.
+     */
+    private final Map<BeanMethod, EJBMethodPermission> beanMethodPermissions = new ConcurrentHashMap<>();
 
     public static enum PermissionCheckResult {
         NOT_APPLICABLE,
@@ -587,7 +595,9 @@ public class AuthorizationService {
     }
 
     public boolean checkBeanMethodPermission(String beanName, String methodInterface, Method method, Set<Principal> principals) {
-        EJBMethodPermission methodPermission = new EJBMethodPermission(beanName, methodInterface, method);
+        EJBMethodPermission methodPermission = beanMethodPermissions.computeIfAbsent(
+            new BeanMethod(beanName, methodInterface, method),
+            key -> new EJBMethodPermission(key.beanName, key.methodInterface, key.method));
 
         boolean authorized = checkPermissionScoped(methodPermission, principals);
 
@@ -881,4 +891,34 @@ public class AuthorizationService {
         T get() throws Throwable;
     }
 
+    /** The key of {@link #beanMethodPermissions}. The interface may be null. */
+    private static final class BeanMethod {
+        private final String beanName;
+        private final String methodInterface;
+        private final Method method;
+
+        BeanMethod(String beanName, String methodInterface, Method method) {
+            this.beanName = beanName;
+            this.methodInterface = methodInterface;
+            this.method = method;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (!(o instanceof BeanMethod)) {
+                return false;
+            }
+            BeanMethod other = (BeanMethod) o;
+            return method.equals(other.method) && Objects.equals(beanName, other.beanName)
+                && Objects.equals(methodInterface, other.methodInterface);
+        }
+
+        @Override
+        public int hashCode() {
+            // Not Objects.hash: its varargs array would be an allocation per call.
+            int hash = method.hashCode();
+            hash = 31 * hash + Objects.hashCode(beanName);
+            return 31 * hash + Objects.hashCode(methodInterface);
+        }
+    }
 }
