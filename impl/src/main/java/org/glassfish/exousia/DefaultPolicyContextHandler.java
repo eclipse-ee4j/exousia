@@ -20,6 +20,8 @@ package org.glassfish.exousia;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 import jakarta.security.jacc.PolicyContextHandler;
+
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -44,17 +46,17 @@ public class DefaultPolicyContextHandler implements PolicyContextHandler {
 
     @Override
     public Object getContext(String key, Object data) throws PolicyContextException {
-        return handlers.get(PolicyContext.getContextID()).get(key).get();
+        return handlers.getOrDefault(PolicyContext.getContextID(), Collections.emptyMap()).get(key).get();
     }
 
     @Override
     public boolean supports(String key) throws PolicyContextException {
-        return handlers.get(PolicyContext.getContextID()).containsKey(key);
+        return handlers.getOrDefault(PolicyContext.getContextID(), Collections.emptyMap()).containsKey(key);
     }
 
     @Override
     public String[] getKeys() throws PolicyContextException {
-        return handlers.get(PolicyContext.getContextID()).keySet().toArray(String[]::new);
+        return handlers.getOrDefault(PolicyContext.getContextID(), Collections.emptyMap()).keySet().toArray(String[]::new);
     }
 
 }
