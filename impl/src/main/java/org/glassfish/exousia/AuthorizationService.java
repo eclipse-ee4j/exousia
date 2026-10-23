@@ -17,15 +17,6 @@
 
 package org.glassfish.exousia;
 
-import static jakarta.security.jacc.PolicyContext.HTTP_SERVLET_REQUEST;
-import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
-import static jakarta.security.jacc.PolicyContext.SUBJECT;
-import static java.lang.System.Logger.Level.DEBUG;
-import static java.lang.System.Logger.Level.ERROR;
-import static java.util.Collections.emptySet;
-import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
-import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
-
 import jakarta.security.jacc.EJBMethodPermission;
 import jakarta.security.jacc.EJBRoleRefPermission;
 import jakarta.security.jacc.Policy;
@@ -40,6 +31,7 @@ import jakarta.security.jacc.WebRoleRefPermission;
 import jakarta.security.jacc.WebUserDataPermission;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.lang.System.Logger;
 import java.lang.reflect.Method;
 import java.security.Permission;
@@ -49,16 +41,28 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+
 import javax.security.auth.Subject;
+
 import org.glassfish.exousia.constraints.SecurityConstraint;
 import org.glassfish.exousia.mapping.DefaultPrincipalMapper;
 import org.glassfish.exousia.mapping.SecurityRoleRef;
 import org.glassfish.exousia.modules.def.DefaultPolicy;
 import org.glassfish.exousia.modules.def.DefaultPolicyConfigurationFactory;
 import org.glassfish.exousia.permissions.JakartaPermissions;
+
+import static jakarta.security.jacc.PolicyContext.HTTP_SERVLET_REQUEST;
+import static jakarta.security.jacc.PolicyContext.PRINCIPAL_MAPPER;
+import static jakarta.security.jacc.PolicyContext.SUBJECT;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.ERROR;
+import static java.util.Collections.emptySet;
+import static org.glassfish.exousia.constraints.transformer.ConstraintsToPermissionsTransformer.createResourceAndDataPermissions;
+import static org.glassfish.exousia.permissions.RolesToPermissionsTransformer.createWebRoleRefPermission;
 
 /**
  *
@@ -559,15 +563,16 @@ public class AuthorizationService {
     boolean checkPermissionScoped(Permission permissionToBeChecked, Set<Principal> principals) {
         LOG.log(DEBUG, "checkPermission(permissionToBeChecked={0}, principals={1})",
             new Object[] {permissionToBeChecked, principals});
-        String oldContextId = null;
+
+        String oldContextId = PolicyContext.getContextID();
         try {
-            oldContextId = setThreadContextId(contextId);
+            setThreadContextId();
             return getPolicy().implies(permissionToBeChecked, principals);
         } catch (Throwable t) {
             LOG.log(ERROR, "Unexpected security exception", t);
         } finally {
             try {
-                setPolicyContextChecked(oldContextId, contextId);
+                restoreThreadContextId(oldContextId);
             } catch (Throwable ex) {
                 LOG.log(ERROR, "Unexpected exception manipulating policy context", ex);
             }
@@ -577,11 +582,11 @@ public class AuthorizationService {
     }
 
     public Object runInScope(ThrowableSupplier<Object> supplier) throws Throwable {
-        String oldContextId = setThreadContextId(contextId);
+        String oldContextId = setThreadContextId();
         try {
             return supplier.get();
         } finally {
-            setPolicyContextChecked(oldContextId, contextId);
+            restoreThreadContextId(oldContextId);
         }
     }
 
@@ -727,6 +732,14 @@ public class AuthorizationService {
         return context.getVirtualServerName() + " " + context.getContextPath();
     }
 
+    private String setThreadContextId() {
+        return setThreadContextId(contextId);
+    }
+
+    private void restoreThreadContextId(String contextIdToRestore) {
+        setPolicyContextChecked(contextIdToRestore, PolicyContext.getContextID());
+    }
+
     public static void setThreadContextId(ServletContext context) {
         PolicyContext.setContextID(getServletContextId(context));
     }
@@ -740,7 +753,7 @@ public class AuthorizationService {
     }
 
     private static void setPolicyContextChecked(String newContextId, String oldContextId) {
-        if (newContextId != null && (oldContextId == null || !oldContextId.equals(newContextId))) {
+        if (!Objects.equals(newContextId, oldContextId)) {
             LOG.log(DEBUG, "Changing Policy Context ID: oldContextId = {0}, newContextId = {1}", oldContextId, newContextId);
             try {
                 PolicyContext.setContextID(newContextId);

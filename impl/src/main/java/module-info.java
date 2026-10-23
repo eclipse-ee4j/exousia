@@ -34,6 +34,5 @@ module org.glassfish.exousia {
     requires jakarta.servlet;
     requires jakarta.security.jacc;
     requires java.logging;
-    requires org.javassist;
     requires static java.management;
 }

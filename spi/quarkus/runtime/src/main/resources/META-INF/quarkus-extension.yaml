@@ -1,0 +1,10 @@
+name: "Exousia - Jakarta Authorization"
+metadata:
+  keywords:
+    - "security"
+    - "jakarta-authorization"
+    - "jacc"
+    - "servlet"
+  categories:
+    - "security"
+  status: "experimental"
