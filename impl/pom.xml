@@ -104,13 +104,6 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-            <version>3.30.2-GA</version>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
       
         
         <!-- Tests -->
@@ -217,7 +210,6 @@
                             !weblogic.security.jacc,!org.glassfish.deployment.common,!org.glassfish.internal.api,
                             !org.jboss.as.security.service,!org.apache.geronimo.security.jacc.mappingprovider,!org.jboss.security,
                             !org.apache.catalina.realm,
-                            javassist.util.proxy;version="[3.1,5)";resolution:=optional,
                             *
                         </Import-Package>
                         <DynamicImport-Package>

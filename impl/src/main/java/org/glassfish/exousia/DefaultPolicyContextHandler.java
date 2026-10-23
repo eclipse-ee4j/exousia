@@ -20,6 +20,7 @@ package org.glassfish.exousia;
 import jakarta.security.jacc.PolicyContext;
 import jakarta.security.jacc.PolicyContextException;
 import jakarta.security.jacc.PolicyContextHandler;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -30,31 +31,81 @@ import java.util.function.Supplier;
  */
 public class DefaultPolicyContextHandler implements PolicyContextHandler {
 
-    private static Map<String, Map<String, Supplier<? extends Object>>> handlers = new ConcurrentHashMap<>();
+    private static final Map<String, Map<String, Supplier<? extends Object>>> handlers = new ConcurrentHashMap<>();
+    private static final String[] NO_KEYS = new String[0];
 
     public static void removeAllForContextId(String contextId) {
         handlers.remove(contextId);
     }
 
     public DefaultPolicyContextHandler(String contextId, String key, Supplier<? extends Object> contextObjectSupplier) {
+        register(contextId, key, contextObjectSupplier);
+    }
+
+    public static void register(String contextId, String key, Supplier<? extends Object> contextObjectSupplier) {
+        // To think about for future:
+        // 1. Allow replacement of keys? If so, boolean replace, or null key?
+        // 2. Return previous registration (if any)?
         handlers.computeIfAbsent(contextId, e -> new ConcurrentHashMap<>())
                 .computeIfAbsent(key, e -> contextObjectSupplier);
-
     }
 
     @Override
     public Object getContext(String key, Object data) throws PolicyContextException {
-        return handlers.get(PolicyContext.getContextID()).get(key).get();
+        if (key == null) {
+            return null;
+        }
+
+        String contextID = PolicyContext.getContextID();
+        if (contextID == null) {
+            return null;
+        }
+
+        var handlersPerContext = handlers.get(contextID);
+        if (handlersPerContext == null) {
+            return null;
+        }
+
+        var contextObjectSupplier = handlersPerContext.get(key);
+        if (contextObjectSupplier == null) {
+            return null;
+        }
+
+        return contextObjectSupplier.get();
     }
 
     @Override
     public boolean supports(String key) throws PolicyContextException {
-        return handlers.get(PolicyContext.getContextID()).containsKey(key);
+        if (key == null) {
+            return false;
+        }
+
+        String contextID = PolicyContext.getContextID();
+        if (contextID == null) {
+            return false;
+        }
+
+        var handlersPerContext = handlers.get(contextID);
+        if (handlersPerContext == null) {
+            return false;
+        }
+
+        return handlersPerContext.containsKey(key);
     }
 
     @Override
     public String[] getKeys() throws PolicyContextException {
-        return handlers.get(PolicyContext.getContextID()).keySet().toArray(String[]::new);
+        String contextID = PolicyContext.getContextID();
+        if (contextID == null) {
+            return NO_KEYS;
+        }
+
+        var handlersPerContext = handlers.get(contextID);
+        if (handlersPerContext == null) {
+            return NO_KEYS;
+        }
+
+        return handlersPerContext.keySet().toArray(String[]::new);
     }
 
 }
