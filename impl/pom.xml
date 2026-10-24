@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2021, 2025 Contributors to Eclipse Foundation.
+    Copyright (c) 2021, 2026 Contributors to Eclipse Foundation.
     Copyright (c) 2010, 2019 Oracle and/or its affiliates. All rights reserved.
 
     This program and the accompanying materials are made available under the
@@ -32,62 +32,6 @@
     <description>
         Eclipse compatible implementation of Jakarta Authorization.
     </description>
-    <url>https://projects.eclipse.org/projects/ee4j.exousia</url>
-    <inceptionYear>2019</inceptionYear>
- 
-    <licenses>
-        <license>
-            <name>EPL 2.0</name>
-            <url>http://www.eclipse.org/legal/epl-2.0</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-
-    <developers>
-        <developer>
-            <id>arjan.tijms</id>
-            <name>Arjan Tijms</name>
-            <email>arjan.tijms@gmail.com</email>
-        </developer>
-        <developer>
-            <id>jakarta-ee4j-exousia</id>
-            <name>Exousia Developers</name>
-            <organization>Eclipse Foundation</organization>
-            <email>exousia-dev@eclipse.org</email>
-        </developer>
-    </developers>
-    <contributors>
-       <contributor>
-           <name>Exousia Contributors</name>
-           <email>exousia-dev@eclipse.org</email>
-           <url>https://github.com/eclipse-ee4j/exousia/graphs/contributors</url>
-       </contributor>
-    </contributors>
-    
-    <mailingLists>
-        <mailingList>
-            <name>Jakarta Authorization dev mailing list</name>
-            <post>exousia-dev@eclipse.org</post>
-            <subscribe>https://dev.eclipse.org/mailman/listinfo/exousia-dev</subscribe>
-            <unsubscribe>https://dev.eclipse.org/mailman/listinfo/exousia-dev</unsubscribe>
-            <archive>https://dev.eclipse.org/mhonarc/lists/exousia-dev</archive>
-        </mailingList>
-    </mailingLists>
-
-    <scm>
-        <url>scm:git:https://github.com/eclipse-ee4j/exousia.git</url>
-        <connection>scm:git:git://github.com/eclipse-ee4j/exousia.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/eclipse-ee4j/exousia.git</developerConnection>
-    </scm>
-    <issueManagement>
-        <system>github</system>
-        <url>https://github.com/eclipse-ee4j/exousia/issues</url>
-    </issueManagement>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -135,7 +79,7 @@
             <resource>
                 <directory>${project.basedir}/..</directory>
                 <includes>
-                    <include>LICENSE.md</include>
+                    <include>LICENSE</include>
                     <include>NOTICE.md</include>
                 </includes>
                 <targetPath>META-INF</targetPath>
@@ -146,41 +90,11 @@
         </resources>
     
         <plugins>
-            <!-- Sets minimal Maven version to 3.9.6 -->
-            <plugin>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>enforce-maven</id>
-                        <goals>
-                            <goal>enforce</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <requireMavenVersion>
-                                    <version>3.9.6</version>
-                                </requireMavenVersion>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.1</version>
-                <configuration>
-                    <release>17</release>
-                </configuration>
-            </plugin>
-            
-            
             <!-- Creates the OSGi MANIFEST.MF file -->
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <version>6.0.0</version>
-                <extensions>true</extensions>
+                <version>6.2.0</version>
                 <configuration>
                     <instructions>
                         <_noimportjava>true</_noimportjava>
@@ -241,19 +155,6 @@
             </plugin>
            
 
-            <!-- Configure the jar with the sources. -->
-            <plugin>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            
             <!-- Create Javadoc for API jar -->
             <plugin>
                 <artifactId>maven-javadoc-plugin</artifactId>
@@ -275,7 +176,7 @@
                             </groups>
                             <bottom><![CDATA[
 Comments to: <a href="mailto:exousia-dev@eclipse.org">exousia-dev@eclipse.org</a>.<br>
-Copyright &#169; 2021, 2025 Eclipse Foundation. All rights reserved.<br>
+Copyright &#169; 2021, 2026 Eclipse Foundation. All rights reserved.<br>
 Use is subject to <a href="http://www.eclipse.org/legal/epl-2.0" target="_top">license terms</a>.]]>
                             </bottom>
                         </configuration>

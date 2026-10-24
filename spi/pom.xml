@@ -31,6 +31,9 @@
    <packaging>pom</packaging>
 
    <name>Exousia SPI</name>
+   <description>
+       Integrations of Exousia into runtimes that don't use Jakarta Authorization themselves - Parent.
+   </description>
 
    <modules>
         <module>tomcat</module>
